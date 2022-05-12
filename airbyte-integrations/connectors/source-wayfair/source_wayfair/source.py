@@ -1,10 +1,13 @@
 #
 # Copyright (c) 2021 Airbyte, Inc., all rights reserved.
 #
+import json
 
+import dateutil.parser
+import datetime
 import os
-from abc import ABC
-from typing import Any, Iterable, List, Mapping, MutableMapping, Optional, Tuple
+from abc import ABC, abstractmethod
+from typing import Any, Iterable, List, Mapping, MutableMapping, Optional, Tuple, Dict
 from airbyte_cdk.models import SyncMode
 from airbyte_cdk.sources.utils.sentry import AirbyteSentry
 import requests
@@ -13,7 +16,11 @@ from airbyte_cdk.sources.streams import Stream
 from .stream import GraphqlStream
 from airbyte_cdk.sources.streams.http.auth import TokenAuthenticator
 from airbyte_cdk.sources.streams.core import package_name_from_class
+from airbyte_cdk.sources.streams.core import IncrementalMixin
 from .utils import ResourceLoader
+from .auth import WayfairAuthenticator
+from functools import cache
+
 """
 TODO: Most comments in this class are instructive and should be deleted after the source is implemented.
 
@@ -32,86 +39,49 @@ There are additional required TODOs in the files within the integration_tests fo
 # Basic full refresh stream
 class WayfairStream(GraphqlStream, ABC):
     """
-    TODO remove this comment
-
-    This class represents a stream output by the connector.
-    This is an abstract base class meant to contain all the common functionality at the API level e.g: the API base URL, pagination strategy,
-    parsing responses etc..
-
-    Each stream should extend this class (or another abstract subclass of it) to specify behavior unique to that stream.
-
-    Typically for REST APIs each stream corresponds to a resource in the API. For example if the API
-    contains the endpoints
-        - GET v1/customers
-        - GET v1/employees
-
-    then you should have three classes:
-    `class WayfairStream(HttpStream, ABC)` which is the current class
-    `class Customers(WayfairStream)` contains behavior to pull data for customers using v1/customers
-    `class Employees(WayfairStream)` contains behavior to pull data for employees using v1/employees
-
-    If some streams implement incremental sync, it is typical to create another class
-    `class IncrementalWayfairStream((WayfairStream), ABC)` then have concrete stream implementations extend it. An example
-    is provided below.
-
-    See the reference docs for the full list of configurable options.
     """
-    limit = 250
 
+    def __init__(self, config: Dict):
+        super().__init__(authenticator=WayfairAuthenticator(config))
+        self.config = config
 
+    @property
+    def page_limit(self):
+        return min(max(int(self.config.get("page_limit", 250)),1),1000)
 
     @property
     def url_base(self):
-        return "https://sandbox.api.wayfair.com/v1/graphql"
+        return self.config.get("api_endpoint", "https://sandbox.api.wayfair.com/v1/graphql")
 
-    def graphql_next_page_token(self, current_page_token: Mapping[str, Any], response: requests.Response) -> Optional[Mapping[str, Any]]:
-        """
-        TODO: Override this method to define a pagination strategy. If you will not be using pagination, no action is required - just return None.
-
-        This method should return a Mapping (e.g: dict) containing whatever information required to make paginated requests. This dict is passed
-        to most other methods in this class to help you form headers, request bodies, query params, etc..
-
-        For example, if the API accepts a 'page' parameter to determine which page of the result to return, and a response from the API contains a
-        'page' number, then this method should probably return a dict {'page': response.json()['page'] + 1} to increment the page count by 1.
-        The request_params method should then read the input next_page_token and set the 'page' param to next_page_token['page'].
-
-        :param response: the most recent response from the API
-        :return If there is another page in the result, a mapping (e.g: dict) containing information needed to query the next page in the response.
-                If there are no more pages in the result, return None.
-        """
-        return None
+    @cache
+    def get_graphql_query(self):
+        query = ResourceLoader(package_name_from_class(self.__class__)).get_graphql_gql(self.name)
+        query = f"{query.decode('utf-8')}".replace("\n", " ")
+        return query
 
     def get_json_schema(self) -> Mapping[str, Any]:
-        return ResourceLoader(package_name_from_class(self.__class__)).get_schema(self.name)
+        # self.logger.info(f"load json schema for {self.__class__}")
+        depth_limit = min(max(int(self.config.get("depth_limit",3)),1),5)
+        return ResourceLoader(package_name_from_class(self.__class__)).\
+            get_schema(self.name, max_depth=depth_limit)
 
     def graphql_query(self,
                       stream_state: Mapping[str, Any],
                       stream_slice: Mapping[str, Any] = None,
                       next_page_token: Mapping[str, Any] = None,
                       ) -> str:
-        gql_file = f"{os.path.dirname(__file__)}/gql/{self.name}.gql"
-        with open(gql_file,"r") as f:
-            gql=f.read()
-        return gql
+        return self.get_graphql_query()
 
-    def graphql_variables(
+    def request_params(
             self,
             stream_state: Mapping[str, Any],
             stream_slice: Mapping[str, Any] = None,
             next_page_token: Mapping[str, Any] = None,
-    ) -> str:
-        pass
-
-    def request_params(
-        self,
-        stream_state: Mapping[str, Any],
-        stream_slice: Mapping[str, Any] = None,
-        next_page_token: Mapping[str, Any] = None,
     ) -> MutableMapping[str, Any]:
         return {}
 
     def request_headers(
-        self, stream_state: Mapping[str, Any], stream_slice: Mapping[str, Any] = None, next_page_token: Mapping[str, Any] = None
+            self, stream_state: Mapping[str, Any], stream_slice: Mapping[str, Any] = None, next_page_token: Mapping[str, Any] = None
     ) -> Mapping[str, Any]:
         return {
             'content-type': 'application/json',
@@ -119,99 +89,157 @@ class WayfairStream(GraphqlStream, ABC):
         }
 
     def request_kwargs(
-        self,
-        stream_state: Mapping[str, Any],
-        stream_slice: Mapping[str, Any] = None,
-        next_page_token: Mapping[str, Any] = None,
+            self,
+            stream_state: Mapping[str, Any],
+            stream_slice: Mapping[str, Any] = None,
+            next_page_token: Mapping[str, Any] = None,
     ) -> Mapping[str, Any]:
         return {}
 
     def parse_response(self, response: requests.Response, **kwargs) -> Iterable[Mapping]:
-        """
-        TODO: Override this method to define how a response is parsed.
-        :return an iterable containing each record in the response
-        """
-        yield {}
+        json_response = response.json()
+        data = json_response.get('data',[])
+        errors = json_response.get('errors',[])
+        records = data.get(self.data_field, []) if self.data_field is not None else data
+        for record in records:
+            yield record
 
-
-class PurchaseOrders(WayfairStream):
-    """
-    TODO: Change class name to match the table/data source this stream corresponds to.
-    """
-
-    # TODO: Fill in the primary key. Required. This is usually a unique field in the stream, like an ID or a timestamp.
-    primary_key = "customer_id"
-
+    @property
+    @abstractmethod
+    def data_field(self) -> str:
+        """The name of the field in the response which contains the data"""
 
 
 # Basic incremental stream
-class IncrementalWayfairStream(WayfairStream, ABC):
-    """
-    TODO fill in details of this class to implement functionality related to incremental syncs for your connector.
-         if you do not need to implement incremental sync for any streams, remove this class.
-    """
+class IncrementalWayfairStream(WayfairStream, IncrementalMixin, ABC):
 
-    # TODO: Fill in to checkpoint stream reads after N records. This prevents re-reading of data if the stream fails for any reason.
-    state_checkpoint_interval = None
+    @property
+    def state_checkpoint_interval(self) -> int:
+        return self.page_limit
 
     @property
     def cursor_field(self) -> str:
-        """
-        TODO
-        Override to return the cursor field used by this stream e.g: an API entity might always use created_at as the cursor field. This is
-        usually id or date based. This field's presence tells the framework this in an incremental stream. Required for incremental.
-
-        :return str: The name of the cursor field.
-        """
-        return []
+        return "id"
 
     def get_updated_state(self, current_stream_state: MutableMapping[str, Any], latest_record: Mapping[str, Any]) -> Mapping[str, Any]:
         """
         Override to determine the latest state after reading the latest record. This typically compared the cursor_field from the latest record and
         the current state and picks the 'most' recent cursor. This is how a stream's state is determined. Required for incremental.
         """
-        return {}
+        return {
+            self.cursor_field: max(
+                latest_record.get(self.cursor_field, ""),
+                current_stream_state.get(self.cursor_field, ""),
+            )
+        }
+
+    @property
+    def state(self) -> MutableMapping[str, Any]:
+        return self._state
+
+    @state.setter
+    def state(self, value: MutableMapping[str, Any]):
+        self._state[self.cursor_field] = value[self.cursor_field]
 
 
-class Employees(IncrementalWayfairStream):
+class PurchaseOrders(IncrementalWayfairStream):
     """
-    TODO: Change class name to match the table/data source this stream corresponds to.
+    Purchase Order stream
     """
 
-    # TODO: Fill in the cursor_field. Required.
-    cursor_field = "start_date"
-
-    # TODO: Fill in the primary key. Required. This is usually a unique field in the stream, like an ID or a timestamp.
-    primary_key = "employee_id"
-
-    def path(self, **kwargs) -> str:
-        """
-        TODO: Override this method to define the path this stream corresponds to. E.g. if the url is https://example-api.com/v1/employees then this should
-        return "single". Required.
-        """
-        return "employees"
+    cursor_field = "poDate"
+    primary_key = "poNumber"
+    data_field = "purchaseOrders"
 
     def stream_slices(self, stream_state: Mapping[str, Any] = None, **kwargs) -> Iterable[Optional[Mapping[str, any]]]:
         """
-        TODO: Optionally override this method to define this stream's slices. If slicing is not needed, delete this method.
-
-        Slices control when state is saved. Specifically, state is saved after a slice has been fully read.
-        This is useful if the API offers reads by groups or filters, and can be paired with the state object to make reads efficient. See the "concepts"
-        section of the docs for more information.
-
-        The function is called before reading any records in a stream. It returns an Iterable of dicts, each containing the
-        necessary data to craft a request for a slice. The stream state is usually referenced to determine what slices need to be created.
-        This means that data in a slice is usually closely related to a stream's cursor_field and stream_state.
-
-        An HTTP request is made for each returned slice. The same slice can be accessed in the path, request_params and request_header functions to help
-        craft that specific request.
-
-        For example, if https://example-api.com/v1/employees offers a date query params that returns data for that particular day, one way to implement
-        this would be to consult the stream state object for the last synced date, then return a slice containing each date from the last synced date
-        till now. The request_params function would then grab the date from the stream_slice and make it part of the request by injecting it into
-        the date query param.
+        create stream slices based on time window between cursor time (with look back time horizon) and current time
+        Outputs:
+        [
+            {"poDate_start": 2021-04-01,
+             "poDate_end": 2021-05-01,
+            }
+        ]
         """
-        raise NotImplementedError("Implement stream slices or delete this method!")
+        if stream_state is None:
+            stream_state = {}
+        curr_date_time = datetime.datetime.utcnow()
+        cursor_datetime = dateutil.parser.isoparse(stream_state.get(self.cursor_field, self.config.get("start_date")))
+        stream_start_datetime = cursor_datetime - datetime.timedelta(hours=max(int(self.config.get("look_back_horizon_in_hours")),0))
+        stream_slices_number = min(max(int(self.config.get('stream_slices_number', 1)),1),100)
+        time_window_in_seconds = (curr_date_time - stream_start_datetime).total_seconds() / stream_slices_number
+        for i in range(stream_slices_number):
+            if i == (stream_slices_number - 1):
+                # last time window
+                yield {
+                    f"{self.cursor_field}_start": stream_start_datetime + datetime.timedelta(seconds=int(i * time_window_in_seconds)),
+                    f"{self.cursor_field}_end": None
+                }
+            else:
+                yield {
+                    f"{self.cursor_field}_start": stream_start_datetime + datetime.timedelta(seconds=int(i * time_window_in_seconds)),
+                    f"{self.cursor_field}_end": stream_start_datetime + datetime.timedelta(seconds=int((i + 1) * time_window_in_seconds)),
+                }
+
+    def graphql_next_page_token(self, current_page_token: Mapping[str, Any], response: requests.Response) -> Optional[Mapping[str, Any]]:
+        # self.logger.info(f"graphql_next_page_token:\n"
+        #                  f"current_page_token={current_page_token}\n"
+        #                  f"response.json={response.json()}")
+        current_page_token = current_page_token or {}
+        json_response = response.json()
+        data = json_response.get('data',[])
+        errors = json_response.get('errors',[])
+        records = data.get(self.data_field, []) if self.data_field is not None else data
+        if len(records) == 0:
+            # current page no data then return None
+            return None
+        current_offset = current_page_token.get("offset", 0)
+        next_offset = current_offset+len(records)
+        return {
+            "offset": next_offset
+        }
+
+    def graphql_variables(self, stream_state: Mapping[str, Any], stream_slice: Mapping[str, Any] = None,
+                          next_page_token: Mapping[str, Any] = None) -> str:
+        # self.logger.info(f"stream_state={stream_state}")
+        # self.logger.info(f"stream_slice={stream_slice}")
+        stream_slice = stream_slice or {}
+        _filters = []
+        _offset = 0
+        if next_page_token:
+            _offset = next_page_token.get("offset",0)
+        if self.config.get("open_order_only"):
+            _filter = {
+                "field":"open",
+                "equals": "true"
+            }
+            _filters.append(_filter)
+        if len(stream_slice) > 0:
+            poDate_start = stream_slice.get("poDate_start")
+            poDate_end = stream_slice.get("poDate_end")
+            if poDate_start:
+                _filter ={
+                    "field":"poDate",
+                    "greaterThanOrEqualTo": poDate_start.isoformat()
+                }
+                _filters.append(_filter)
+            if poDate_end:
+                _filter = {
+                    "field":"poDate",
+                    "lessThan": poDate_end.isoformat()
+                }
+                _filters.append(_filter)
+        graphql_variables = {
+            "filters": _filters,
+            "limit": self.page_limit,
+            "ordering": [{
+                "asc": self.cursor_field
+            }],
+            "offset": _offset,
+            "dryRun": False
+        }
+        # self.logger.info(f"graphql_varaibles={graphql_variables}")
+        return json.dumps(graphql_variables)
 
 
 # Source
@@ -227,14 +255,24 @@ class SourceWayfair(AbstractSource):
         :param logger:  logger object
         :return Tuple[bool, any]: (True, None) if the input config can be used to connect to the API successfully, (False, error) otherwise.
         """
-        return True, None
+        authenticator = WayfairAuthenticator(config)
+        try:
+            access_token = authenticator.get_access_token()
+            if access_token:
+                url = "https://sandbox.api.wayfair.com/v1/demo/clock"
+                headers = {
+                    'Authorization': 'Bearer ' + access_token,
+                    'Content-Type': 'application/json',
+                }
+                response = requests.request('GET', url, headers=headers)
+                response.raise_for_status()
+                response_json = response.json()
+                if len(response_json['errors'])>0:
+                    return False, response_json['errors']
+                logger.info(f"{response_json['data']}")
+                return True, None
+        except (requests.exceptions.RequestException, IndexError) as e:
+            return False, e
 
     def streams(self, config: Mapping[str, Any]) -> List[Stream]:
-        """
-        TODO: Replace the streams below with your own streams.
-
-        :param config: A Mapping of the user input configuration as defined in the connector spec.
-        """
-        # TODO remove the authenticator if not required.
-        auth = TokenAuthenticator(token="api_key")  # Oauth2Authenticator is also available if you need oauth support
-        return [PurchaseOrders(authenticator=auth), Employees(authenticator=auth)]
+        return [PurchaseOrders(config)]

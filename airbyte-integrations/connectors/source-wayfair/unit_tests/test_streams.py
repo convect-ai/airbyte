@@ -3,10 +3,10 @@
 #
 
 from http import HTTPStatus
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock,Mock
 
 import pytest
-from source_wayfair.source import WayfairStream
+from source_wayfair.source import WayfairStream,PurchaseOrders
 
 
 @pytest.fixture
@@ -15,6 +15,12 @@ def patch_base_class(mocker):
     mocker.patch.object(WayfairStream, "path", "v0/example_endpoint")
     mocker.patch.object(WayfairStream, "primary_key", "test_primary_key")
     mocker.patch.object(WayfairStream, "__abstractmethods__", set())
+
+
+def test_graphql_query(patch_base_class):
+    stream = PurchaseOrders()
+    query = stream.graphql_query(None)
+    assert query
 
 
 def test_request_params(patch_base_class):

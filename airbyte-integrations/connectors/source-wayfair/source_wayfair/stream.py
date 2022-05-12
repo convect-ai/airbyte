@@ -10,8 +10,8 @@ from abc import ABC, abstractmethod
 from typing import Any, Iterable, List, Mapping, MutableMapping, Optional, Union
 from airbyte_cdk.sources.streams.core import Stream
 from airbyte_cdk.sources.utils.sentry import AirbyteSentry
-from airbyte_cdk.sources.streams.http.rate_limiting import default_backoff_handler,user_defined_backoff_handler
-from airbyte_cdk.sources.streams.http.exceptions import DefaultBackoffException,UserDefinedBackoffException
+from airbyte_cdk.sources.streams.http.rate_limiting import default_backoff_handler, user_defined_backoff_handler
+from airbyte_cdk.sources.streams.http.exceptions import DefaultBackoffException, UserDefinedBackoffException
 from requests.auth import AuthBase
 from airbyte_cdk.sources.streams.http import HttpStream
 
@@ -20,8 +20,7 @@ logging.getLogger("vcr").setLevel(logging.ERROR)
 
 class GraphqlStream(HttpStream, ABC):
 
-    def __init__(self, authenticator: AuthBase):
-        assert isinstance(authenticator, AuthBase)
+    def __init__(self, authenticator: AuthBase = None):
         super().__init__(authenticator)
 
     @abstractmethod
@@ -31,11 +30,11 @@ class GraphqlStream(HttpStream, ABC):
         """
 
     def path(
-        self,
-        *,
-        stream_state: Mapping[str, Any] = None,
-        stream_slice: Mapping[str, Any] = None,
-        next_page_token: Mapping[str, Any] = None,
+            self,
+            *,
+            stream_state: Mapping[str, Any] = None,
+            stream_slice: Mapping[str, Any] = None,
+            next_page_token: Mapping[str, Any] = None,
     ) -> str:
         """
         Returns the URL path for the API endpoint e.g: if you wanted to hit https://myapi.com/v1/some_entity then this should return "some_entity"
@@ -72,6 +71,7 @@ class GraphqlStream(HttpStream, ABC):
         graphql_payload = '''{"query": "%s","variables": %s}''' % (graphql_query, graphsql_variables)
         args = {
             "method": "POST",
+            "url": self.url_base,
             "headers": headers,
             "data": graphql_payload,
             "params": params,

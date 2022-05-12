@@ -14,25 +14,101 @@ def _resolve_ref_links(obj: Any,current_depth, max_depth) -> Union[Dict[str, Any
     :param obj - jsonschema object with ref field resolved.
     :return JSON serializable object with references without external dependencies.
     """
-    if current_depth==max_depth:
-        return obj
+    if current_depth >max_depth:
+        return None
     if isinstance(obj, jsonref.JsonRef):
-        print(obj)
         obj = _resolve_ref_links(obj.__subject__,current_depth+1,max_depth)
-        # Omit existing definitions for external resource since
-        # we dont need it anymore.
-        obj.pop("definitions", None)
+        if obj:
+            obj.pop("definitions", None)
         return obj
     elif isinstance(obj, dict):
-        return {k: _resolve_ref_links(v,current_depth+1,max_depth) for k, v in obj.items()}
+        ret = {}
+        for k,v in obj.items():
+            _v = _resolve_ref_links(v, current_depth, max_depth)
+            if _v:
+                ret[k] =_v
+        if len(ret)==0:
+            return None
+        return ret
     elif isinstance(obj, list):
-        return [_resolve_ref_links(item,current_depth+1,max_depth) for item in obj]
+        ret = []
+        for i in obj:
+            _v = _resolve_ref_links(i,current_depth,max_depth)
+            if _v:
+                ret.append(_v)
+        if len(ret)==0:
+            return None
+        return ret
+    else:
+        return obj
+
+
+def _remove_empty_object(obj):
+    if isinstance(obj,dict):
+        if obj.get("type")=='object':
+            if "properties" not in obj.keys():
+                return None
+        ret={}
+        for k,v in obj.items():
+            _v = _remove_empty_object(v)
+            if _v:
+                ret[k]=_v
+        if len(ret)==0:
+            return None
+        return ret
+    elif isinstance(obj, list):
+        ret = []
+        for i in obj:
+            _v = _remove_empty_object(i)
+            if _v:
+                ret.append(_v)
+        if len(ret)==0:
+            return None
+        return ret
+    else:
+        return obj
+
+
+def _remove_empty_array(obj):
+    if isinstance(obj,dict):
+        if obj.get("anyOf"):
+            _v = obj.get("anyOf")
+            if len(_v) ==1:
+                if isinstance(_v[0],dict) and _v[0].get("type")=='null':
+                    return None
+        if obj.get("type")=='array':
+            if "items" not in obj.keys():
+                return None
+        ret = {}
+        for k, v in obj.items():
+            _v = _remove_empty_array(v)
+            if _v:
+                ret[k] = _v
+        if len(ret) == 0:
+            return None
+        return ret
+    elif isinstance(obj, list):
+        ret = []
+        for i in obj:
+            _v = _remove_empty_array(i)
+            if _v:
+                ret.append(_v)
+        if len(ret) == 0:
+            return None
+        return ret
     else:
         return obj
 
 
 def resolve_ref_links(obj: Any, max_depth=5) -> Union[Dict[str, Any], List[Any]]:
-    return _resolve_ref_links(obj,0,max_depth)
+    resolved = _resolve_ref_links(obj,0,max_depth)
+    resolved = json.loads(json.dumps(resolved))
+    resolved = _remove_empty_object(resolved)
+    resolved = _remove_empty_array(resolved)
+    # TODO here we pass remove empty array twice to resolve the corn case when delete anyOf leads to empty array
+    # we might make this more efficient
+    resolved = _remove_empty_array(resolved)
+    return resolved
 
 
 class JsonFileLoader:
@@ -55,7 +131,7 @@ class ResourceLoader:
     def __init__(self, package_name: str):
         self.package_name = package_name
 
-    def get_schema(self, name: str, max_depth:int =5) -> dict:
+    def get_schema(self, name: str, max_depth:int =3) -> dict:
         """
         This method retrieves a JSON schema from the schemas/ folder.
 
@@ -79,7 +155,7 @@ class ResourceLoader:
 
         return self.__resolve_schema_references(raw_schema,max_depth=max_depth)
 
-    def __resolve_schema_references(self, raw_schema: dict, max_depth:int=5) -> dict:
+    def __resolve_schema_references(self, raw_schema: dict, max_depth:int=3) -> dict:
         """
         Resolve links to external references and move it to local "definitions" map.
 

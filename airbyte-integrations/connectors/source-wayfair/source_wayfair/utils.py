@@ -155,7 +155,7 @@ class ResourceLoader:
 
         return self.__resolve_schema_references(raw_schema,max_depth=max_depth)
 
-    def __resolve_schema_references(self, raw_schema: dict, max_depth:int=3) -> dict:
+    def __resolve_schema_references(self, raw_schema: dict, max_depth:int=3,allow_null=True) -> dict:
         """
         Resolve links to external references and move it to local "definitions" map.
 
@@ -163,7 +163,17 @@ class ResourceLoader:
         :param max_depth max_depth when resolve the reference link
         :return JSON serializable object with references without external dependencies.
         """
-
+        if allow_null:
+            # here we set up following basic type to allow null value
+            _definitions = raw_schema.get("definitions")
+            if _definitions:
+                for k,v in _definitions.items():
+                    if isinstance(_definitions[k]['type'], str):
+                        if _definitions[k]['type']=="object":
+                            # allow string for object type
+                            raw_schema['definitions'][k]['type'] = [_definitions[k]['type'],"string", "null"]
+                        else:
+                            raw_schema['definitions'][k]['type'] = [_definitions[k]['type'],"null"]
         package = importlib.import_module(self.package_name)
         base = os.path.dirname(package.__file__) + "/"
         resolved = jsonref.JsonRef.replace_refs(raw_schema, loader=JsonFileLoader(base, "schemas/shared"), base_uri=base)

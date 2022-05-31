@@ -9,6 +9,7 @@ import io.airbyte.config.OperatorDbt;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import java.nio.file.Path;
+import io.airbyte.workers.normalization.DefaultNormalizationRunner.DestinationType;
 
 public interface NormalizationRunner extends AutoCloseable {
 
@@ -62,4 +63,6 @@ public interface NormalizationRunner extends AutoCloseable {
                     ResourceRequirements resourceRequirements)
       throws Exception;
 
+  DestinationType getDestinationType()
+    throws Exception;
 }

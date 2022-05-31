@@ -162,7 +162,7 @@ public class DefaultNormalizationRunner implements NormalizationRunner {
   }
 
   @VisibleForTesting
-  DestinationType getDestinationType() {
+  public DestinationType getDestinationType() {
     return destinationType;
   }
 

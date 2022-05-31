@@ -85,9 +85,16 @@ class ConnectorConfig(BaseConfig):
     class Config:
         title = "Source Facebook Marketing"
 
+    account_id: str = Field(
+        title="Account ID",
+        order=0,
+        description="The Facebook Ad account ID to use when pulling data from the Facebook Marketing API.",
+        examples=["111111111111111"],
+    )
+
     start_date: datetime = Field(
         title="Start Date",
-        order=0,
+        order=1,
         description=(
             "The date from which you'd like to replicate data for all incremental streams, "
             "in the format YYYY-MM-DDT00:00:00Z. All data generated after this date will be replicated."
@@ -98,7 +105,7 @@ class ConnectorConfig(BaseConfig):
 
     end_date: Optional[datetime] = Field(
         title="End Date",
-        order=1,
+        order=2,
         description=(
             "The date until which you'd like to replicate data for all incremental streams, in the format YYYY-MM-DDT00:00:00Z. "
             "All data generated between start_date and this date will be replicated. "
@@ -107,13 +114,6 @@ class ConnectorConfig(BaseConfig):
         pattern=DATE_TIME_PATTERN,
         examples=["2017-01-26T00:00:00Z"],
         default_factory=pendulum.now,
-    )
-
-    account_id: str = Field(
-        title="Account ID",
-        order=2,
-        description="The Facebook Ad account ID to use when pulling data from the Facebook Marketing API.",
-        examples=["111111111111111"],
     )
 
     access_token: str = Field(
@@ -145,5 +145,14 @@ class ConnectorConfig(BaseConfig):
         order=6,
         description=(
             "A list which contains insights entries, each entry must have a name and can contains fields, breakdowns or action_breakdowns)"
+        ),
+    )
+
+    page_size: Optional[PositiveInt] = Field(
+        title="Page Size of Requests",
+        order=7,
+        default=100,
+        description=(
+            "Page size used when sending requests to Facebook API to specify number of records per page when response has pagination. Most users do not need to set this field unless they specifically need to tune the connector to address specific issues or use cases."
         ),
     )

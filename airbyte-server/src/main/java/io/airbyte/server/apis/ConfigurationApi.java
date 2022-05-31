@@ -16,6 +16,10 @@ import io.airbyte.api.model.ConnectionReadList;
 import io.airbyte.api.model.ConnectionSearch;
 import io.airbyte.api.model.ConnectionState;
 import io.airbyte.api.model.ConnectionUpdate;
+import io.airbyte.api.model.CustomDestinationDefinitionCreate;
+import io.airbyte.api.model.CustomDestinationDefinitionUpdate;
+import io.airbyte.api.model.CustomSourceDefinitionCreate;
+import io.airbyte.api.model.CustomSourceDefinitionUpdate;
 import io.airbyte.api.model.DbMigrationExecutionRead;
 import io.airbyte.api.model.DbMigrationReadList;
 import io.airbyte.api.model.DbMigrationRequestBody;
@@ -23,6 +27,7 @@ import io.airbyte.api.model.DestinationCoreConfig;
 import io.airbyte.api.model.DestinationCreate;
 import io.airbyte.api.model.DestinationDefinitionCreate;
 import io.airbyte.api.model.DestinationDefinitionIdRequestBody;
+import io.airbyte.api.model.DestinationDefinitionIdWithWorkspaceId;
 import io.airbyte.api.model.DestinationDefinitionRead;
 import io.airbyte.api.model.DestinationDefinitionReadList;
 import io.airbyte.api.model.DestinationDefinitionSpecificationRead;
@@ -51,6 +56,10 @@ import io.airbyte.api.model.OperationRead;
 import io.airbyte.api.model.OperationReadList;
 import io.airbyte.api.model.OperationUpdate;
 import io.airbyte.api.model.OperatorConfiguration;
+import io.airbyte.api.model.PrivateDestinationDefinitionRead;
+import io.airbyte.api.model.PrivateDestinationDefinitionReadList;
+import io.airbyte.api.model.PrivateSourceDefinitionRead;
+import io.airbyte.api.model.PrivateSourceDefinitionReadList;
 import io.airbyte.api.model.SetInstancewideDestinationOauthParamsRequestBody;
 import io.airbyte.api.model.SetInstancewideSourceOauthParamsRequestBody;
 import io.airbyte.api.model.SlugRequestBody;
@@ -58,11 +67,13 @@ import io.airbyte.api.model.SourceCoreConfig;
 import io.airbyte.api.model.SourceCreate;
 import io.airbyte.api.model.SourceDefinitionCreate;
 import io.airbyte.api.model.SourceDefinitionIdRequestBody;
+import io.airbyte.api.model.SourceDefinitionIdWithWorkspaceId;
 import io.airbyte.api.model.SourceDefinitionRead;
 import io.airbyte.api.model.SourceDefinitionReadList;
 import io.airbyte.api.model.SourceDefinitionSpecificationRead;
 import io.airbyte.api.model.SourceDefinitionUpdate;
 import io.airbyte.api.model.SourceDiscoverSchemaRead;
+import io.airbyte.api.model.SourceDiscoverSchemaRequestBody;
 import io.airbyte.api.model.SourceIdRequestBody;
 import io.airbyte.api.model.SourceOauthConsentRequest;
 import io.airbyte.api.model.SourceRead;
@@ -76,6 +87,8 @@ import io.airbyte.api.model.WebBackendConnectionReadList;
 import io.airbyte.api.model.WebBackendConnectionRequestBody;
 import io.airbyte.api.model.WebBackendConnectionSearch;
 import io.airbyte.api.model.WebBackendConnectionUpdate;
+import io.airbyte.api.model.WebBackendWorkspaceState;
+import io.airbyte.api.model.WebBackendWorkspaceStateResult;
 import io.airbyte.api.model.WorkspaceCreate;
 import io.airbyte.api.model.WorkspaceGiveFeedback;
 import io.airbyte.api.model.WorkspaceIdRequestBody;
@@ -91,6 +104,8 @@ import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigPersistence;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.persistence.SecretsRepositoryReader;
+import io.airbyte.config.persistence.SecretsRepositoryWriter;
 import io.airbyte.db.Database;
 import io.airbyte.scheduler.client.EventRunner;
 import io.airbyte.scheduler.client.SchedulerJobClient;
@@ -126,6 +141,7 @@ import java.io.IOException;
 import java.net.http.HttpClient;
 import java.nio.file.Path;
 import java.util.Map;
+import org.flywaydb.core.Flyway;
 
 @javax.ws.rs.Path("/v1")
 public class ConfigurationApi implements io.airbyte.api.V1Api {
@@ -153,6 +169,8 @@ public class ConfigurationApi implements io.airbyte.api.V1Api {
   public ConfigurationApi(final ConfigRepository configRepository,
                           final JobPersistence jobPersistence,
                           final ConfigPersistence seed,
+                          final SecretsRepositoryReader secretsRepositoryReader,
+                          final SecretsRepositoryWriter secretsRepositoryWriter,
                           final SchedulerJobClient schedulerJobClient,
                           final SynchronousSchedulerClient synchronousSchedulerClient,
                           final FileTtlManager archiveTtlManager,
@@ -168,7 +186,9 @@ public class ConfigurationApi implements io.airbyte.api.V1Api {
                           final Path workspaceRoot,
                           final HttpClient httpClient,
                           final FeatureFlags featureFlags,
-                          final EventRunner eventRunner) {
+                          final EventRunner eventRunner,
+                          final Flyway configsFlyway,
+                          final Flyway jobsFlyway) {
     this.workerEnvironment = workerEnvironment;
     this.logConfigs = logConfigs;
     this.workspaceRoot = workspaceRoot;
@@ -184,6 +204,8 @@ public class ConfigurationApi implements io.airbyte.api.V1Api {
 
     schedulerHandler = new SchedulerHandler(
         configRepository,
+        secretsRepositoryReader,
+        secretsRepositoryWriter,
         schedulerJobClient,
         synchronousSchedulerClient,
         jobPersistence,
@@ -198,10 +220,20 @@ public class ConfigurationApi implements io.airbyte.api.V1Api {
         eventRunner,
         featureFlags,
         workerConfigs);
-    sourceHandler = new SourceHandler(configRepository, schemaValidator, connectionsHandler);
+    sourceHandler = new SourceHandler(
+        configRepository,
+        secretsRepositoryReader,
+        secretsRepositoryWriter,
+        schemaValidator,
+        connectionsHandler);
     sourceDefinitionsHandler = new SourceDefinitionsHandler(configRepository, synchronousSchedulerClient, sourceHandler);
     operationsHandler = new OperationsHandler(configRepository);
-    destinationHandler = new DestinationHandler(configRepository, schemaValidator, connectionsHandler);
+    destinationHandler = new DestinationHandler(
+        configRepository,
+        secretsRepositoryReader,
+        secretsRepositoryWriter,
+        schemaValidator,
+        connectionsHandler);
     destinationDefinitionsHandler = new DestinationDefinitionsHandler(configRepository, synchronousSchedulerClient, destinationHandler);
     workspacesHandler = new WorkspacesHandler(configRepository, connectionsHandler, destinationHandler, sourceHandler);
     jobHistoryHandler = new JobHistoryHandler(jobPersistence, workerEnvironment, logConfigs, connectionsHandler, sourceHandler,
@@ -215,11 +247,14 @@ public class ConfigurationApi implements io.airbyte.api.V1Api {
         schedulerHandler,
         operationsHandler,
         featureFlags,
-        eventRunner);
-    healthCheckHandler = new HealthCheckHandler();
+        eventRunner,
+        configRepository);
+    healthCheckHandler = new HealthCheckHandler(configRepository);
     archiveHandler = new ArchiveHandler(
         airbyteVersion,
         configRepository,
+        secretsRepositoryReader,
+        secretsRepositoryWriter,
         jobPersistence,
         seed,
         workspaceHelper,
@@ -227,7 +262,7 @@ public class ConfigurationApi implements io.airbyte.api.V1Api {
         true);
     logsHandler = new LogsHandler();
     openApiConfigHandler = new OpenApiConfigHandler();
-    dbMigrationHandler = new DbMigrationHandler(configsDatabase, jobsDatabase);
+    dbMigrationHandler = new DbMigrationHandler(configsDatabase, configsFlyway, jobsDatabase, jobsFlyway);
   }
 
   // WORKSPACE
@@ -291,8 +326,18 @@ public class ConfigurationApi implements io.airbyte.api.V1Api {
   }
 
   @Override
+  public SourceDefinitionReadList listSourceDefinitionsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody) {
+    return execute(() -> sourceDefinitionsHandler.listSourceDefinitionsForWorkspace(workspaceIdRequestBody));
+  }
+
+  @Override
   public SourceDefinitionReadList listLatestSourceDefinitions() {
     return execute(sourceDefinitionsHandler::listLatestSourceDefinitions);
+  }
+
+  @Override
+  public PrivateSourceDefinitionReadList listPrivateSourceDefinitions(final WorkspaceIdRequestBody workspaceIdRequestBody) {
+    return execute(() -> sourceDefinitionsHandler.listPrivateSourceDefinitions(workspaceIdRequestBody));
   }
 
   @Override
@@ -301,13 +346,30 @@ public class ConfigurationApi implements io.airbyte.api.V1Api {
   }
 
   @Override
+  public SourceDefinitionRead getSourceDefinitionForWorkspace(final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId) {
+    return execute(() -> sourceDefinitionsHandler.getSourceDefinitionForWorkspace(sourceDefinitionIdWithWorkspaceId));
+  }
+
+  // TODO: Deprecate this route in favor of createCustomSourceDefinition
+  // since all connector definitions created through the API are custom
+  @Override
   public SourceDefinitionRead createSourceDefinition(final SourceDefinitionCreate sourceDefinitionCreate) {
-    return execute(() -> sourceDefinitionsHandler.createCustomSourceDefinition(sourceDefinitionCreate));
+    return execute(() -> sourceDefinitionsHandler.createPrivateSourceDefinition(sourceDefinitionCreate));
+  }
+
+  @Override
+  public SourceDefinitionRead createCustomSourceDefinition(final CustomSourceDefinitionCreate customSourceDefinitionCreate) {
+    return execute(() -> sourceDefinitionsHandler.createCustomSourceDefinition(customSourceDefinitionCreate));
   }
 
   @Override
   public SourceDefinitionRead updateSourceDefinition(final SourceDefinitionUpdate sourceDefinitionUpdate) {
     return execute(() -> sourceDefinitionsHandler.updateSourceDefinition(sourceDefinitionUpdate));
+  }
+
+  @Override
+  public SourceDefinitionRead updateCustomSourceDefinition(final CustomSourceDefinitionUpdate customSourceDefinitionUpdate) {
+    return execute(() -> sourceDefinitionsHandler.updateCustomSourceDefinition(customSourceDefinitionUpdate));
   }
 
   @Override
@@ -318,11 +380,32 @@ public class ConfigurationApi implements io.airbyte.api.V1Api {
     });
   }
 
+  @Override
+  public void deleteCustomSourceDefinition(final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId) {
+    execute(() -> {
+      sourceDefinitionsHandler.deleteCustomSourceDefinition(sourceDefinitionIdWithWorkspaceId);
+      return null;
+    });
+  }
+
+  @Override
+  public PrivateSourceDefinitionRead grantSourceDefinitionToWorkspace(final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId) {
+    return execute(() -> sourceDefinitionsHandler.grantSourceDefinitionToWorkspace(sourceDefinitionIdWithWorkspaceId));
+  }
+
+  @Override
+  public void revokeSourceDefinitionFromWorkspace(final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId) {
+    execute(() -> {
+      sourceDefinitionsHandler.revokeSourceDefinitionFromWorkspace(sourceDefinitionIdWithWorkspaceId);
+      return null;
+    });
+  }
+
   // SOURCE SPECIFICATION
 
   @Override
-  public SourceDefinitionSpecificationRead getSourceDefinitionSpecification(final SourceDefinitionIdRequestBody sourceDefinitionIdRequestBody) {
-    return execute(() -> schedulerHandler.getSourceDefinitionSpecification(sourceDefinitionIdRequestBody));
+  public SourceDefinitionSpecificationRead getSourceDefinitionSpecification(final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId) {
+    return execute(() -> schedulerHandler.getSourceDefinitionSpecification(sourceDefinitionIdWithWorkspaceId));
   }
 
   // OAUTH
@@ -414,8 +497,8 @@ public class ConfigurationApi implements io.airbyte.api.V1Api {
   }
 
   @Override
-  public SourceDiscoverSchemaRead discoverSchemaForSource(final SourceIdRequestBody sourceIdRequestBody) {
-    return execute(() -> schedulerHandler.discoverSchemaForSourceFromSourceId(sourceIdRequestBody));
+  public SourceDiscoverSchemaRead discoverSchemaForSource(final SourceDiscoverSchemaRequestBody discoverSchemaRequestBody) {
+    return execute(() -> schedulerHandler.discoverSchemaForSourceFromSourceId(discoverSchemaRequestBody));
   }
 
   // DB MIGRATION
@@ -438,8 +521,18 @@ public class ConfigurationApi implements io.airbyte.api.V1Api {
   }
 
   @Override
+  public DestinationDefinitionReadList listDestinationDefinitionsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody) {
+    return execute(() -> destinationDefinitionsHandler.listDestinationDefinitionsForWorkspace(workspaceIdRequestBody));
+  }
+
+  @Override
   public DestinationDefinitionReadList listLatestDestinationDefinitions() {
     return execute(destinationDefinitionsHandler::listLatestDestinationDefinitions);
+  }
+
+  @Override
+  public PrivateDestinationDefinitionReadList listPrivateDestinationDefinitions(final WorkspaceIdRequestBody workspaceIdRequestBody) {
+    return execute(() -> destinationDefinitionsHandler.listPrivateDestinationDefinitions(workspaceIdRequestBody));
   }
 
   @Override
@@ -448,13 +541,31 @@ public class ConfigurationApi implements io.airbyte.api.V1Api {
   }
 
   @Override
+  public DestinationDefinitionRead getDestinationDefinitionForWorkspace(
+                                                                        final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId) {
+    return execute(() -> destinationDefinitionsHandler.getDestinationDefinitionForWorkspace(destinationDefinitionIdWithWorkspaceId));
+  }
+
+  // TODO: Deprecate this route in favor of createCustomDestinationDefinition
+  // since all connector definitions created through the API are custom
+  @Override
   public DestinationDefinitionRead createDestinationDefinition(final DestinationDefinitionCreate destinationDefinitionCreate) {
-    return execute(() -> destinationDefinitionsHandler.createCustomDestinationDefinition(destinationDefinitionCreate));
+    return execute(() -> destinationDefinitionsHandler.createPrivateDestinationDefinition(destinationDefinitionCreate));
+  }
+
+  @Override
+  public DestinationDefinitionRead createCustomDestinationDefinition(final CustomDestinationDefinitionCreate customDestinationDefinitionCreate) {
+    return execute(() -> destinationDefinitionsHandler.createCustomDestinationDefinition(customDestinationDefinitionCreate));
   }
 
   @Override
   public DestinationDefinitionRead updateDestinationDefinition(final DestinationDefinitionUpdate destinationDefinitionUpdate) {
     return execute(() -> destinationDefinitionsHandler.updateDestinationDefinition(destinationDefinitionUpdate));
+  }
+
+  @Override
+  public DestinationDefinitionRead updateCustomDestinationDefinition(final CustomDestinationDefinitionUpdate customDestinationDefinitionUpdate) {
+    return execute(() -> destinationDefinitionsHandler.updateCustomDestinationDefinition(customDestinationDefinitionUpdate));
   }
 
   @Override
@@ -465,11 +576,34 @@ public class ConfigurationApi implements io.airbyte.api.V1Api {
     });
   }
 
+  @Override
+  public void deleteCustomDestinationDefinition(final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId) {
+    execute(() -> {
+      destinationDefinitionsHandler.deleteCustomDestinationDefinition(destinationDefinitionIdWithWorkspaceId);
+      return null;
+    });
+  }
+
+  @Override
+  public PrivateDestinationDefinitionRead grantDestinationDefinitionToWorkspace(
+                                                                                final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId) {
+    return execute(() -> destinationDefinitionsHandler.grantDestinationDefinitionToWorkspace(destinationDefinitionIdWithWorkspaceId));
+  }
+
+  @Override
+  public void revokeDestinationDefinitionFromWorkspace(final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId) {
+    execute(() -> {
+      destinationDefinitionsHandler.revokeDestinationDefinitionFromWorkspace(destinationDefinitionIdWithWorkspaceId);
+      return null;
+    });
+  }
+
   // DESTINATION SPECIFICATION
 
   @Override
-  public DestinationDefinitionSpecificationRead getDestinationDefinitionSpecification(final DestinationDefinitionIdRequestBody destinationDefinitionIdRequestBody) {
-    return execute(() -> schedulerHandler.getDestinationSpecification(destinationDefinitionIdRequestBody));
+  public DestinationDefinitionSpecificationRead getDestinationDefinitionSpecification(
+                                                                                      final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId) {
+    return execute(() -> schedulerHandler.getDestinationSpecification(destinationDefinitionIdWithWorkspaceId));
   }
 
   // DESTINATION IMPLEMENTATION
@@ -687,6 +821,11 @@ public class ConfigurationApi implements io.airbyte.api.V1Api {
   @Override
   public WebBackendConnectionRead webBackendGetConnection(final WebBackendConnectionRequestBody webBackendConnectionRequestBody) {
     return execute(() -> webBackendConnectionsHandler.webBackendGetConnection(webBackendConnectionRequestBody));
+  }
+
+  @Override
+  public WebBackendWorkspaceStateResult webBackendGetWorkspaceState(final WebBackendWorkspaceState webBackendWorkspaceState) {
+    return execute(() -> webBackendConnectionsHandler.getWorkspaceState(webBackendWorkspaceState));
   }
 
   @Override

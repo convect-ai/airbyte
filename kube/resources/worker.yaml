@@ -23,6 +23,11 @@ spec:
                 configMapKeyRef:
                   name: airbyte-env
                   key: AIRBYTE_VERSION
+            - name: CONTAINER_ORCHESTRATOR_IMAGE
+              valueFrom:
+                configMapKeyRef:
+                  name: airbyte-env
+                  key: CONTAINER_ORCHESTRATOR_IMAGE
             - name: CONFIG_ROOT
               valueFrom:
                 configMapKeyRef:

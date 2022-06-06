@@ -8,8 +8,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.config.OperatorDbt;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
-import java.nio.file.Path;
 import io.airbyte.workers.normalization.DefaultNormalizationRunner.DestinationType;
+import java.nio.file.Path;
 
 public interface NormalizationRunner extends AutoCloseable {
 
@@ -64,5 +64,6 @@ public interface NormalizationRunner extends AutoCloseable {
       throws Exception;
 
   DestinationType getDestinationType()
-    throws Exception;
+      throws Exception;
+
 }

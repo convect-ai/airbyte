@@ -259,7 +259,11 @@ class SourceWayfair(AbstractSource):
         try:
             access_token = authenticator.get_access_token()
             if access_token:
-                url = "https://sandbox.api.wayfair.com/v1/demo/clock"
+                api_endpoint = config.get("api_endpoint")
+                if 'sandbox' in api_endpoint:
+                    url = "https://sandbox.api.wayfair.com/v1/demo/clock"
+                else:
+                    url = "https://api.wayfair.com/v1/demo/clock"
                 headers = {
                     'Authorization': 'Bearer ' + access_token,
                     'Content-Type': 'application/json',

@@ -1,0 +1,52 @@
+{
+
+            "type": "object",
+            "properties": {
+                "brokenQuantity": {
+                    "title": "brokenQuantity",
+                    "type": "integer",
+                    "description": "破损库存数"
+                },
+                "inboundingQuantity": {
+                    "title": "inboundingQuantity",
+                    "type": "integer",
+                    "description": "入库库存数"
+                },
+                "omsSku": {
+                    "title": "omsSku",
+                    "type": "string",
+                    "description": "SKU"
+                },
+                "outboundingQuantity": {
+                    "title": "outboundingQuantity",
+                    "type": "integer",
+                    "description": "出库占用库存数"
+                },
+                "pickedQuantity": {
+                    "title": "pickedQuantity",
+                    "type": "integer",
+                    "description": "拣货缓存库存数"
+                },
+                "skuNameEN": {
+                    "title": "skuNameEN",
+                    "type": "string",
+                    "description": "产品名称"
+                },
+                "skuType": {
+                    "title": "skuType",
+                    "type": "integer",
+                    "description": "产品类型, 1：单个产品 2：组合产品"
+                },
+                "standardQuantity": {
+                    "title": "standardQuantity",
+                    "type": "integer",
+                    "description": "标品库存数"
+                },
+                "warehouseId": {
+                    "title": "warehouseId",
+                    "type": "string",
+                    "description": "仓库编号"
+                }
+            },
+            "additionalProperties": false
+}

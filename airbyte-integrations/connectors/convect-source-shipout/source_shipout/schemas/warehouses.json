@@ -1,0 +1,71 @@
+{
+
+            "type": "object",
+            "properties": {
+                "orgId": {
+                    "title": "orgId",
+                    "type": "string",
+                    "description": "仓库机构ID"
+                },
+                "timeZone": {
+                    "title": "timeZone",
+                    "type": "string",
+                    "description": "仓库时区"
+                },
+                "warehouseAddr1": {
+                    "title": "warehouseAddr1",
+                    "type": "string",
+                    "description": "仓库地址1"
+                },
+                "warehouseAddr2": {
+                    "title": "warehouseAddr2",
+                    "type": "string",
+                    "description": "仓库地址2"
+                },
+                "warehouseCity": {
+                    "title": "warehouseCity",
+                    "type": "string",
+                    "description": "仓库所在城市"
+                },
+                "warehouseContacts": {
+                    "title": "warehouseContacts",
+                    "type": "string",
+                    "description": "仓库联系人"
+                },
+                "warehouseCountry": {
+                    "title": "warehouseCountry",
+                    "type": "string",
+                    "description": "仓库所在国家"
+                },
+                "warehouseEmail": {
+                    "title": "warehouseEmail",
+                    "type": "string",
+                    "description": "仓库联系Email"
+                },
+                "warehouseId": {
+                    "title": "warehouseId",
+                    "type": "string",
+                    "description": "仓库编号"
+                },
+                "warehouseName": {
+                    "title": "warehouseName",
+                    "type": "string",
+                    "description": "仓库名称"
+                },
+                "warehousePhone": {
+                    "title": "warehousePhone",
+                    "type": "string",
+                    "description": "仓库联系电话"
+                },
+                "warehouseProvince": {
+                    "title": "warehouseProvince",
+                    "type": "string",
+                    "description": "仓库所在州"
+                },
+                "warehouseZipCode": {
+                    "title": "warehouseZipCode",
+                    "type": "string",
+                    "description": "仓库邮编"
+                }
+            }
+}

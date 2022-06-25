@@ -1,0 +1,45 @@
+documentationUrl: https://docsurl.com
+connectionSpecification:
+  $schema: http://json-schema.org/draft-07/schema#
+  title: Shipout Spec
+  type: object
+  required:
+    - credentials
+    - api_endpoint
+    - org_id
+  additionalProperties: false
+  properties:
+    credentials:
+      type: object
+      title: Shipout Authentication Methods
+      oneOf:
+        - type: object
+          title: Basic Auth
+          required:
+            - authorization
+            - app_key
+            - app_secret
+          properties:
+            authorization:
+              type: string
+              title: Authorization
+            app_key:
+              type: string
+              title: App Key
+              airbyte_secret: true
+            app_secret:
+              type: string
+              title: App Secret
+              airbyte_secret: true
+    org_id:
+      type: string
+      title: Organization ID
+    api_endpoint:
+      type: string
+      title: API Endpoint
+    page_size:
+      type: string
+      title: Page Size
+      default: 50
+      pattern: ^[0-9]+$
+      description: The number of records to return per page.

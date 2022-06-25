@@ -1,0 +1,261 @@
+{
+  "type": "object",
+  "properties": {
+    "aliases": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "object",
+        "$ref": "#/definitions/product_alias",
+        "description": "店铺别名详情"
+      }
+    },
+    "asin": {
+      "title": "asin",
+      "type": "string",
+      "description": "ASIN码"
+    },
+    "auditRemark": {
+      "title": "auditRemark",
+      "type": "string",
+      "description": "审核备注"
+    },
+    "batteryFlag": {
+      "title": "batteryFlag",
+      "type": "string",
+      "description": "是否有电池"
+    },
+    "batteryType": {
+      "title": "batteryType",
+      "type": "string",
+      "description": "电池类型,含电池时必传. 1.Lithium Ion-Cells or batteries ONLY;2.Lithium Ion-Packed with Equipment;3.Lithium Ion-Contained in Equipment4.Lithium Metal-Cells or batteries ONLY5.Lithium Metal-Packed with Equipment6.Lithium Metal-Contained in Equipment"
+    },
+    "brand": {
+      "title": "brand",
+      "type": "string",
+      "description": "品牌"
+    },
+    "bundleDetail": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "object",
+        "$ref": "#/definitions/bundle_detail"
+      }
+    },
+    "custDescription": {
+      "title": "custDescription",
+      "type": "string",
+      "description": "产品海关描述"
+    },
+    "declaredValue": {
+      "title": "declaredValue",
+      "type": "number",
+      "format": "float",
+      "description": "货值"
+    },
+    "distanceUnit": {
+      "title": "distanceUnit",
+      "type": "string",
+      "description": "长度单位，仅支持 in，cm"
+    },
+    "ean": {
+      "title": "ean",
+      "type": "string",
+      "description": "EAN码"
+    },
+    "extraBarcode1": {
+      "title": "extraBarcode1",
+      "type": "string",
+      "description": "额外编码"
+    },
+    "fnSku": {
+      "title": "fnSku",
+      "type": "string",
+      "description": "FNSKU码"
+    },
+    "height": {
+      "title": "height",
+      "type": "number",
+      "format": "float",
+      "description": "高度"
+    },
+    "individualInventory": {
+      "title": "individualInventory",
+      "type": "integer",
+      "description": "1.仅有独立库存 2.独立库存+非独立库存"
+    },
+    "length": {
+      "title": "length",
+      "type": "number",
+      "format": "float",
+      "description": "长度"
+    },
+    "massUnit": {
+      "title": "massUnit",
+      "type": "string",
+      "description": "重量单位，仅支持“lb”，“kg”"
+    },
+    "note": {
+      "title": "note",
+      "type": "string",
+      "description": "备注"
+    },
+    "omsSku": {
+      "title": "omsSku",
+      "type": "string",
+      "description": "系统SKU"
+    },
+    "orgId": {
+      "title": "orgId",
+      "type": "string",
+      "description": "客户机构号"
+    },
+    "originCountry": {
+      "title": "originCountry",
+      "type": "string",
+      "description": "原产地国家，格式标准遵循ISO 3166-1 alpha-2"
+    },
+    "purchasingCost": {
+      "title": "purchasingCost",
+      "type": "number",
+      "format": "float",
+      "description": "采购金额"
+    },
+    "qtyInOnePackage": {
+      "title": "qtyInOnePackage",
+      "type": "integer",
+      "description": "单包裹产品数量,运输类型为直接运输有效"
+    },
+    "quantityUnit": {
+      "title": "quantityUnit",
+      "type": "string",
+      "description": "数量单位（来自于承运商要求）"
+    },
+    "scheduleB": {
+      "title": "scheduleB",
+      "type": "string",
+      "description": "海关协调码"
+    },
+    "shippingType": {
+      "title": "shippingType",
+      "type": "string",
+      "description": "运输类型，1.直接运输 2.需要仓库另外打包"
+    },
+    "skuId": {
+      "title": "skuId",
+      "type": "string"
+    },
+    "skuNameCN": {
+      "title": "skuNameCN",
+      "type": "string",
+      "description": "产品描述"
+    },
+    "skuNameEN": {
+      "title": "skuNameEN",
+      "type": "string",
+      "description": "产品名称"
+    },
+    "status": {
+      "title": "status",
+      "type": "integer",
+      "description": "状态，1.待审核 2.已审核 3.已归档"
+    },
+    "type": {
+      "title": "type",
+      "type": "integer",
+      "description": "类型 1.单个产品 2.组合产品"
+    },
+    "upc": {
+      "title": "upc",
+      "type": "string",
+      "description": "UPC码"
+    },
+    "valueCurrency": {
+      "title": "valueCurrency",
+      "type": "string",
+      "description": "货值币种，格式标准遵循ISO 4217"
+    },
+    "warehouseIds": {
+      "title": "warehouseIds",
+      "type": "array",
+      "description": "新增/修改 产品时选择的仓库列表",
+      "items": {
+        "title": "warehouseIds",
+        "type": "string",
+        "description": "仓库ID"
+      }
+    },
+    "weight1": {
+      "title": "weight1",
+      "type": "number",
+      "format": "float",
+      "description": "主重量，根据重量单位的不同，展示kg或者是lb"
+    },
+    "weight2": {
+      "title": "weight2",
+      "type": "number",
+      "format": "float",
+      "description": "次重量，根据重量单位的不同，展示g或者是oz，与主重量相加即为总重量"
+    },
+    "width": {
+      "title": "width",
+      "type": "number",
+      "format": "float",
+      "description": "宽度"
+    }
+  },
+  "definitions": {
+    "product_alias": {
+      "type": "object",
+      "properties": {
+        "omsSKu": {
+          "title": "omsSKu",
+          "type": "string",
+          "description": "系统SKU"
+        },
+        "sku": {
+          "title": "sku",
+          "type": "string",
+          "description": "店铺SKU"
+        },
+        "storeId": {
+          "title": "storeId",
+          "type": "string",
+          "description": "店铺ID"
+        }
+      },
+      "additionalProperties": false
+    },
+    "bundle_detail": {
+      "type": "object",
+      "properties": {
+        "childQuantity": {
+          "title": "childQuantity",
+          "type": "integer",
+          "description": "子SKU在组合中的数量"
+        },
+        "childSkuId": {
+          "title": "childSkuId",
+          "type": "string",
+          "description": "子SKU"
+        },
+        "note": {
+          "title": "note",
+          "type": "string",
+          "description": "组装信息"
+        },
+        "parentSkuId": {
+          "title": "parentSkuId",
+          "type": "string",
+          "description": "系统SKU"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

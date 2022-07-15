@@ -4,12 +4,11 @@ import { FormattedMessage } from "react-intl";
 import { ConnectionConfiguration } from "core/domain/connection";
 import { LogsRequestError } from "core/request/LogsRequestError";
 import useRouter from "hooks/useRouter";
-import { TrackActionType, useTrackAction } from "hooks/useTrackAction";
+import { TrackActionLegacyType, TrackActionType, TrackActionNamespace, useTrackAction } from "hooks/useTrackAction";
 import { SourceDefinitionReadWithLatestTag } from "services/connector/SourceDefinitionService";
 import { useGetSourceDefinitionSpecificationAsync } from "services/connector/SourceDefinitionSpecificationService";
 import { createFormErrorMessage } from "utils/errorStatusMessage";
 import { ConnectorCard } from "views/Connector/ConnectorCard";
-import { useDocumentationPanelContext } from "views/Connector/ConnectorDocumentationLayout/DocumentationPanelContext";
 import { ServiceFormValues } from "views/Connector/ServiceForm/types";
 
 interface SourceFormProps {
@@ -41,8 +40,7 @@ export const SourceForm: React.FC<SourceFormProps> = ({
   afterSelectConnector,
 }) => {
   const { location } = useRouter();
-  const { setDocumentationUrl, setDocumentationPanelOpen } = useDocumentationPanelContext();
-  const trackNewSourceAction = useTrackAction(TrackActionType.NEW_SOURCE);
+  const trackNewSourceAction = useTrackAction(TrackActionNamespace.SOURCE, TrackActionLegacyType.NEW_SOURCE);
 
   const [sourceDefinitionId, setSourceDefinitionId] = useState<string | null>(
     hasSourceDefinitionId(location.state) ? location.state.sourceDefinitionId : null
@@ -55,16 +53,14 @@ export const SourceForm: React.FC<SourceFormProps> = ({
   } = useGetSourceDefinitionSpecificationAsync(sourceDefinitionId);
 
   const onDropDownSelect = (sourceDefinitionId: string) => {
-    setDocumentationPanelOpen(false);
     setSourceDefinitionId(sourceDefinitionId);
+
     const connector = sourceDefinitions.find((item) => item.sourceDefinitionId === sourceDefinitionId);
-    setDocumentationUrl(connector?.documentationUrl || "");
 
     if (afterSelectConnector) {
       afterSelectConnector();
     }
-
-    trackNewSourceAction("Select a connector", {
+    trackNewSourceAction("Select a connector", TrackActionType.SELECT, {
       connector_source: connector?.name,
       connector_source_definition_id: sourceDefinitionId,
     });

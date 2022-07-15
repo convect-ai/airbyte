@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2021 Airbyte, Inc., all rights reserved.
+# Copyright (c) 2022 Airbyte, Inc., all rights reserved.
 #
 
 from collections import namedtuple
@@ -9,7 +9,7 @@ import pytest
 from airbyte_cdk import AirbyteLogger
 from freezegun import freeze_time
 from google.ads.googleads.errors import GoogleAdsException
-from google.ads.googleads.v9.errors.types.authorization_error import AuthorizationErrorEnum
+from google.ads.googleads.v11.errors.types.authorization_error import AuthorizationErrorEnum
 from pendulum import today
 from source_google_ads.custom_query_stream import CustomQuery
 from source_google_ads.google_ads import GoogleAds

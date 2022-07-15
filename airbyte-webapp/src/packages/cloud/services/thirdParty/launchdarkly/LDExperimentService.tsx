@@ -1,14 +1,17 @@
 import * as LDClient from "launchdarkly-js-client-sdk";
 import { useEffect, useRef, useState } from "react";
+import { useIntl } from "react-intl";
 import { useEffectOnce } from "react-use";
 import { finalize, Subject } from "rxjs";
 
 import { LoadingPage } from "components";
 
 import { useConfig } from "config";
+import { useI18nContext } from "core/i18n";
 import { useAnalytics } from "hooks/services/Analytics";
 import { ExperimentProvider, ExperimentService } from "hooks/services/Experiment";
 import type { Experiments } from "hooks/services/Experiment/experiments";
+import { FeatureSet, useFeatureService } from "hooks/services/Feature";
 import { User } from "packages/cloud/lib/domain/users";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";
 import { rejectAfter } from "utils/promises";
@@ -19,30 +22,68 @@ import { rejectAfter } from "utils/promises";
  */
 const INITIALIZATION_TIMEOUT = 1500;
 
+const FEATURE_FLAG_EXPERIMENT = "featureService.overwrites";
+
 type LDInitState = "initializing" | "failed" | "initialized";
 
-function mapUserToLDUser(user: User | null): LDClient.LDUser {
+function mapUserToLDUser(user: User | null, locale: string): LDClient.LDUser {
   return user
     ? {
         key: user.userId,
         email: user.email,
         name: user.name,
-        custom: { intercomHash: user.intercomHash },
+        custom: { intercomHash: user.intercomHash, locale },
         anonymous: false,
       }
     : {
         anonymous: true,
+        custom: { locale },
       };
 }
 
 const LDInitializationWrapper: React.FC<{ apiKey: string }> = ({ children, apiKey }) => {
+  const { setFeatureOverwrites } = useFeatureService();
   const ldClient = useRef<LDClient.LDClient>();
   const [state, setState] = useState<LDInitState>("initializing");
   const { user } = useAuthService();
   const { addContextProps: addAnalyticsContext } = useAnalytics();
+  const { locale } = useIntl();
+  const { setMessageOverwrite } = useI18nContext();
+
+  /**
+   * This function checks for all experiments to find the ones beginning with "i18n_{locale}_"
+   * and treats them as message overwrites for our bundled messages. Empty messages will be treated as not overwritten.
+   */
+  const updateI18nMessages = () => {
+    const prefix = `i18n_`;
+    const messageOverwrites = Object.entries(ldClient.current?.allFlags() ?? {})
+      // Only filter experiments beginning with the prefix and having an actual non-empty string value set
+      .filter(([id, value]) => id.startsWith(prefix) && !!value && typeof value === "string")
+      // Slice away the prefix of the key, to only keep the actual i18n id as a key
+      .map(([id, msg]) => [id.slice(prefix.length), msg]);
+    // Use those messages as overwrites in the i18nContext
+    setMessageOverwrite(Object.fromEntries(messageOverwrites));
+  };
+
+  /**
+   * Update the feature overwrites based on the LaunchDarkly value.
+   * It's expected to be a comma separated list of features (the values
+   * of the enum) that should be enabled. Each can be prefixed with "-"
+   * to disable the feature instead.
+   */
+  const updateFeatureOverwrites = (featureOverwriteString: string) => {
+    const featureSet = featureOverwriteString.split(",").reduce((featureSet, featureString) => {
+      const [key, enabled] = featureString.startsWith("-") ? [featureString.slice(1), false] : [featureString, true];
+      return {
+        ...featureSet,
+        [key]: enabled,
+      };
+    }, {} as FeatureSet);
+    setFeatureOverwrites(featureSet);
+  };
 
   if (!ldClient.current) {
-    ldClient.current = LDClient.initialize(apiKey, mapUserToLDUser(user));
+    ldClient.current = LDClient.initialize(apiKey, mapUserToLDUser(user, locale));
     // Wait for either LaunchDarkly to initialize or a specific timeout to pass first
     Promise.race([
       ldClient.current.waitForInitialization(),
@@ -53,6 +94,9 @@ const LDInitializationWrapper: React.FC<{ apiKey: string }> = ({ children, apiKe
         setState("initialized");
         // Make sure enabled experiments are added to each analytics event
         addAnalyticsContext({ experiments: ldClient.current?.allFlags() });
+        // Check for overwritten i18n messages
+        updateI18nMessages();
+        updateFeatureOverwrites(ldClient.current?.variation(FEATURE_FLAG_EXPERIMENT, ""));
       })
       .catch((reason) => {
         // If the promise fails, either because LaunchDarkly service fails to initialize, or
@@ -64,9 +108,19 @@ const LDInitializationWrapper: React.FC<{ apiKey: string }> = ({ children, apiKe
   }
 
   useEffectOnce(() => {
+    const onFeatureServiceCange = (newOverwrites: string) => {
+      updateFeatureOverwrites(newOverwrites);
+    };
+    ldClient.current?.on(`change:${FEATURE_FLAG_EXPERIMENT}`, onFeatureServiceCange);
+    return () => ldClient.current?.off(`change:${FEATURE_FLAG_EXPERIMENT}`, onFeatureServiceCange);
+  });
+
+  useEffectOnce(() => {
     const onFeatureFlagsChanged = () => {
       // Update analytics context whenever a flag changes
       addAnalyticsContext({ experiments: ldClient.current?.allFlags() });
+      // Check for overwritten i18n messages
+      updateI18nMessages();
     };
     ldClient.current?.on("change", onFeatureFlagsChanged);
     return () => ldClient.current?.off("change", onFeatureFlagsChanged);
@@ -74,8 +128,8 @@ const LDInitializationWrapper: React.FC<{ apiKey: string }> = ({ children, apiKe
 
   // Whenever the user should change (e.g. login/logout) we need to reidentify the changes with the LD client
   useEffect(() => {
-    ldClient.current?.identify(mapUserToLDUser(user));
-  }, [user]);
+    ldClient.current?.identify(mapUserToLDUser(user, locale));
+  }, [locale, user]);
 
   // Show the loading page while we're still waiting for the initial set of feature flags (or them to time out)
   if (state === "initializing") {

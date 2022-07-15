@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2021 Airbyte, Inc., all rights reserved.
+# Copyright (c) 2022 Airbyte, Inc., all rights reserved.
 #
 
 
@@ -240,28 +240,31 @@ def test_raise_on_http_errors_off_5xx(mocker, status_code):
 @pytest.mark.parametrize("status_code", [400, 401, 402, 403, 416])
 def test_raise_on_http_errors_off_non_retryable_4xx(mocker, status_code):
     stream = AutoFailFalseHttpStream()
-    req = requests.Response()
-    req.status_code = status_code
+    req = requests.PreparedRequest()
+    res = requests.Response()
+    res.status_code = status_code
 
-    mocker.patch.object(requests.Session, "send", return_value=req)
+    mocker.patch.object(requests.Session, "send", return_value=res)
     response = stream._send_request(req, {})
     assert response.status_code == status_code
 
 
-def test_raise_on_http_errors_off_timeout(requests_mock):
+@pytest.mark.parametrize(
+    "error",
+    (
+        requests.exceptions.ConnectTimeout,
+        requests.exceptions.ConnectionError,
+        requests.exceptions.ChunkedEncodingError,
+        requests.exceptions.ReadTimeout,
+    ),
+)
+def test_raise_on_http_errors(mocker, error):
     stream = AutoFailFalseHttpStream()
-    requests_mock.register_uri("GET", stream.url_base, exc=requests.exceptions.ConnectTimeout)
+    send_mock = mocker.patch.object(requests.Session, "send", side_effect=error())
 
-    with pytest.raises(requests.exceptions.ConnectTimeout):
+    with pytest.raises(error):
         list(stream.read_records(SyncMode.full_refresh))
-
-
-def test_raise_on_http_errors_off_connection_error(requests_mock):
-    stream = AutoFailFalseHttpStream()
-    requests_mock.register_uri("GET", stream.url_base, exc=requests.exceptions.ConnectionError)
-
-    with pytest.raises(requests.exceptions.ConnectionError):
-        list(stream.read_records(SyncMode.full_refresh))
+    assert send_mock.call_count == stream.max_retries + 1
 
 
 class PostHttpStream(StubBasicReadHttpStream):
@@ -326,13 +329,13 @@ class TestRequestBody:
             list(stream.read_records(sync_mode=SyncMode.full_refresh))
 
     def test_body_for_all_methods(self, mocker, requests_mock):
-        """Stream must send a body for POST/PATCH/PUT methods only"""
+        """Stream must send a body for GET/POST/PATCH/PUT methods only"""
         stream = PostHttpStream()
         methods = {
             "POST": True,
             "PUT": True,
             "PATCH": True,
-            "GET": False,
+            "GET": True,
             "DELETE": False,
             "OPTIONS": False,
         }
@@ -435,9 +438,10 @@ def test_send_raise_on_http_errors_logs(mocker, status_code):
     mocker.patch.object(AutoFailTrueHttpStream, "logger")
     mocker.patch.object(AutoFailTrueHttpStream, "should_retry", mocker.Mock(return_value=False))
     stream = AutoFailTrueHttpStream()
-    req = requests.Response()
-    req.status_code = status_code
-    mocker.patch.object(requests.Session, "send", return_value=req)
+    req = requests.PreparedRequest()
+    res = requests.Response()
+    res.status_code = status_code
+    mocker.patch.object(requests.Session, "send", return_value=res)
     with pytest.raises(requests.exceptions.HTTPError):
         response = stream._send_request(req, {})
         stream.logger.error.assert_called_with(response.text)
@@ -474,10 +478,10 @@ def test_default_parse_response_error_message(api_response: dict, expected_messa
     assert message == expected_message
 
 
-def test_default_parse_response_error_message_not_json():
+def test_default_parse_response_error_message_not_json(requests_mock):
     stream = StubBasicReadHttpStream()
-    response = MagicMock()
-    response.json.side_effect = requests.exceptions.JSONDecodeError()
+    requests_mock.register_uri("GET", "mock://test.com/not_json", text="this is not json")
+    response = requests.get("mock://test.com/not_json")
 
     message = stream.parse_response_error_message(response)
     assert message is None

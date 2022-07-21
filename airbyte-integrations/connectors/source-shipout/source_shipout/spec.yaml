@@ -5,8 +5,7 @@ connectionSpecification:
   type: object
   required:
     - credentials
-    - api_endpoint
-    - org_id
+    - use_sandbox
   additionalProperties: false
   properties:
     credentials:
@@ -23,6 +22,7 @@ connectionSpecification:
             authorization:
               type: string
               title: Authorization
+              description: The bear token starts with 'bear'
             app_key:
               type: string
               title: App Key
@@ -31,15 +31,7 @@ connectionSpecification:
               type: string
               title: App Secret
               airbyte_secret: true
-    org_id:
-      type: string
-      title: Organization ID
-    api_endpoint:
-      type: string
-      title: API Endpoint
-    page_size:
-      type: string
-      title: Page Size
-      default: 50
-      pattern: ^[0-9]+$
-      description: The number of records to return per page.
+    use_sandbox:
+      type: boolean
+      title: If to use sandbox endpoint
+      default: false

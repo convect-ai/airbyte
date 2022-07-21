@@ -1,19 +1,17 @@
 #
 # Copyright (c) 2022 Airbyte, Inc., all rights reserved.
 #
-import os.path
+
+import time
 from abc import ABC
-from typing import Any, Iterable, List, Mapping, MutableMapping, Optional, Tuple, Dict, Union
-from pprint import pprint
+from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Optional, Tuple, Union
+
 import requests
 from airbyte_cdk.sources import AbstractSource
 from airbyte_cdk.sources.streams import Stream
 from airbyte_cdk.sources.streams.http import HttpStream
-from airbyte_cdk.sources.streams.core import package_name_from_class
-from airbyte_cdk.sources.streams.http.auth import TokenAuthenticator
-import time
-from .config import OMS_INFO_WAREHOUSE_LIST_END_POINT, OMS_STOCK_LIST_ENDPOINT, OMS_PRODUCT_QUERYLIST_ENDPOINT
-from .utils import get_sign,ResourceSchemaLoader
+
+from .utils import ShipoutAuthenticator 
 
 """
 TODO: Most comments in this class are instructive and should be deleted after the source is implemented.
@@ -58,23 +56,22 @@ class ShipoutStream(HttpStream, ABC):
     See the reference docs for the full list of configurable options.
     """
 
+    page_size = 50
+    sandbox_endpoint = "https://opendev.shipout.com/api/"
+    base_endpoint = "https://open.shipout.com/api/"
+
     def __init__(self, config: Dict):
-        super().__init__()
+        authenticator = ShipoutAuthenticator(config, path=self.path())
+        super().__init__(authenticator=authenticator)
         self.config = config
 
     @property
-    def page_size(self):
-        return self.config.get("page_size", 50)
-
-    def get_json_schema(self) -> Mapping[str, Any]:
-        return ResourceSchemaLoader(package_name_from_class(self.__class__)).get_schema(self.name)
-
-    @property
     def url_base(self) -> str:
-        url =  self.config.get("api_endpoint", "https://opendev.shipout.com/api")
-        if not url.endswith("/"):
-            url = url + "/"
-        return url
+        use_sandbox = self.config.get("use_sandbox", False)
+        if use_sandbox:
+            return self.sandbox_endpoint
+
+        return self.base_endpoint
 
     def next_page_token(self, response: requests.Response) -> Optional[Mapping[str, Any]]:
         """
@@ -121,7 +118,7 @@ class ShipoutStream(HttpStream, ABC):
             raise Exception("No data found in response")
 
     def request_params(
-            self, stream_state: Mapping[str, Any], stream_slice: Mapping[str, any] = None, next_page_token: Mapping[str, Any] = None
+        self, stream_state: Mapping[str, Any], stream_slice: Mapping[str, any] = None, next_page_token: Mapping[str, Any] = None
     ) -> MutableMapping[str, Any]:
         """
         TODO: Override this method to define any query parameters to be set. Remove this method if you don't need to define request params.
@@ -133,26 +130,6 @@ class ShipoutStream(HttpStream, ABC):
             curPageNo = next_page_token.get("page")
         return {"curPageNo": curPageNo, "pageSize": self.page_size}
 
-    def request_headers(
-        self, stream_state: Mapping[str, Any], stream_slice: Mapping[str, Any] = None, next_page_token: Mapping[str, Any] = None
-    ) -> Mapping[str, Any]:
-        auth_token = self.config["credentials"]["authorization"]
-        app_key = self.config["credentials"]["app_key"]
-        app_secret = self.config["credentials"]["app_secret"]
-        timestamp = int(time.time())
-        version = "1.0.0"
-        path = self.path(stream_state=stream_state, stream_slice=stream_slice,next_page_token=next_page_token)
-        if not path.startswith("/"):
-            path = "/" + path
-        headers = {
-            "Authorization": f"{auth_token}",
-            "timestamp": f"{timestamp}",
-            "appKey": app_key,
-            "version": version,
-            "sign": get_sign(path=path, version=version,
-                             timestamp=timestamp, app_secret=app_secret)
-        }
-        return headers
 
 
 class Warehouses(ShipoutStream):
@@ -167,38 +144,40 @@ class Warehouses(ShipoutStream):
         return None
 
     def path(
-            self, stream_state: Mapping[str, Any] = None, stream_slice: Mapping[str, Any] = None, next_page_token: Mapping[str, Any] = None
+        self, stream_state: Mapping[str, Any] = None, stream_slice: Mapping[str, Any] = None, next_page_token: Mapping[str, Any] = None
     ) -> str:
-        """
-        """
-        return OMS_INFO_WAREHOUSE_LIST_END_POINT.strip("/")
-
-    def request_params(
-            self, stream_state: Mapping[str, Any], stream_slice: Mapping[str, any] = None, next_page_token: Mapping[str, Any] = None
-    ) -> MutableMapping[str, Any]:
-        return {}
+        """ """
+        return "open-api/oms/info/warehouse/list"
 
 
 class Products(ShipoutStream):
-    """
+    """ """
 
-    """
     primary_key = "skuId"
 
-    def path(self, *, stream_state: Mapping[str, Any] = None, stream_slice: Mapping[str, Any] = None,
-             next_page_token: Mapping[str, Any] = None) -> str:
-        return OMS_PRODUCT_QUERYLIST_ENDPOINT.strip("/")
+    def path(
+        self, *, stream_state: Mapping[str, Any] = None, stream_slice: Mapping[str, Any] = None, next_page_token: Mapping[str, Any] = None
+    ) -> str:
+        return "open-api/oms/product/queryList"
 
 
 class Stocks(ShipoutStream):
-    """
+    """ """
 
-    """
     primary_key = "_platform_object_id"
 
-    def path(self, *, stream_state: Mapping[str, Any] = None, stream_slice: Mapping[str, Any] = None,
-             next_page_token: Mapping[str, Any] = None) -> str:
-        return OMS_STOCK_LIST_ENDPOINT.strip("/")
+    def path(
+        self, *, stream_state: Mapping[str, Any] = None, stream_slice: Mapping[str, Any] = None, next_page_token: Mapping[str, Any] = None
+    ) -> str:
+        return "open-api/oms/stock/list"
+
+    def request_params(
+        self, stream_state: Mapping[str, Any], stream_slice: Mapping[str, any] = None, next_page_token: Mapping[str, Any] = None
+    ) -> MutableMapping[str, Any]:
+        params = super().request_params(stream_state, stream_slice, next_page_token)
+        # sync all inventory records, not only those in-stock
+        params["showSkuType"] = 0
+        return params
 
     def parse_response(self, response: requests.Response, **kwargs) -> Iterable[Mapping]:
         """
@@ -206,22 +185,15 @@ class Stocks(ShipoutStream):
         """
         json_response = response.json()
         data = json_response.get("data")
-        current = data.get("current")
-        pages = data.get("pages")
-        size = data.get("size")
-        total = data.get("total")
-        print(f"pages: {pages}, size: {size}, total: {total}, current: {current}")
-        self.logger.info(f"pages: {pages} size: {size} total: {total}, current: {current}")
-        data = json_response.get("data")
-        self.logger.info(f"data: {data}")
         if data:
             records = data.get("records")
             if records:
                 for record in records:
-                    record[self.primary_key] = record.get("warehouseId")+"-"+record.get("omsSku")
+                    record[self.primary_key] = record.get("warehouseId") + "-" + record.get("omsSku")
                     yield record
         else:
             raise Exception("No data found in response")
+
 
 # Source
 class SourceShipout(AbstractSource):
@@ -236,27 +208,14 @@ class SourceShipout(AbstractSource):
         :param logger:  logger object
         :return Tuple[bool, any]: (True, None) if the input config can be used to connect to the API successfully, (False, error) otherwise.
         """
-        api_endpoint = config["api_endpoint"]
-        auth_token = config["credentials"]["authorization"]
-        app_key = config["credentials"]["app_key"]
-        app_secret = config["credentials"]["app_secret"]
         try:
-            timestamp = int(time.time())
-            version = "1.0.0"
-            url = os.path.join(api_endpoint, OMS_INFO_WAREHOUSE_LIST_END_POINT.strip("/"))
-            resp = requests.get(url=url, headers={
-                "Authorization": f"{auth_token}",
-                "timestamp": f"{timestamp}",
-                "appKey": app_key,
-                "version": version,
-                "sign": get_sign(path=OMS_INFO_WAREHOUSE_LIST_END_POINT, version=version,
-                                 timestamp=timestamp, app_secret=app_secret)
-            })
-            pprint(resp.json())
-            resp.raise_for_status()
+            resp = list(Warehouses(config).read_records(sync_mode=None))
+            warehouse_id = resp[0].get("warehouseId")
+            if warehouse_id is not None:
+                return True, None
         except (requests.exceptions.RequestException, IndexError) as e:
-            logger.error(e)
             return False, e
+
         return True, None
 
     def streams(self, config: Mapping[str, Any]) -> List[Stream]:

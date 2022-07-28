@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "co_id": {
+      "type": [
+        "null",
+        "integer"
+      ]
+    },
+    "wms_co_id": {
+      "type": [
+        "null",
+        "integer"
+      ]
+    },
+    "is_main": {
+      "type": "boolean",
+      "default": false
+    }
+  }
+}

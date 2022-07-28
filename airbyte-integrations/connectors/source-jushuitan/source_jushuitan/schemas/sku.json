@@ -1,0 +1,302 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "sku_id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "i_id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "name": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "short_name": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "sale_price": {
+      "type": [
+        "null",
+        "number"
+      ]
+    },
+    "cost_price": {
+      "type": [
+        "null",
+        "number"
+      ]
+    },
+    "properties_value": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "c_id": {
+      "type": [
+        "null",
+        "integer"
+      ]
+    },
+    "category": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "pic_big": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "pic": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "enabled": {
+      "type": [
+        "null",
+        "integer"
+      ]
+    },
+    "weight": {
+      "type": [
+        "null",
+        "number"
+      ]
+    },
+    "market_price": {
+      "type": [
+        "null",
+        "number"
+      ]
+    },
+    "brand": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "supplier_id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "supplier_name": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "modified": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "format": "date-time"
+    },
+    "sku_code": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "color": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "supplier_sku_id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "supplier_i_id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "vc_name": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "sku_type": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "creator": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "created": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "format": "date-time"
+    },
+    "remark": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "item_type": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "stock_disabled": {
+      "type": [
+        "null",
+        "integer"
+      ]
+    },
+    "unit": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "shelf_life": {
+      "type": [
+        "null",
+        "integer"
+      ]
+    },
+    "labels": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "productionbatch_format": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "production_license": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "l": {
+      "type": [
+        "null",
+        "number"
+      ]
+    },
+    "w": {
+      "type": [
+        "null",
+        "number"
+      ]
+    },
+    "h": {
+      "type": [
+        "null",
+        "number"
+      ]
+    },
+    "other_price_1": {
+      "type": [
+        "null",
+        "number"
+      ]
+    },
+    "other_price_2": {
+      "type": [
+        "null",
+        "number"
+      ]
+    },
+    "other_price_3": {
+      "type": [
+        "null",
+        "number"
+      ]
+    },
+    "other_price_4": {
+      "type": [
+        "null",
+        "number"
+      ]
+    },
+    "other_price_5": {
+      "type": [
+        "null",
+        "number"
+      ]
+    },
+    "other_1": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "other_2": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "other_3": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "other_4": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "other_5": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "stock_type": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "sku_codes": {
+      "type": [
+        "null",
+        "string"
+      ]
+    }
+  }
+}

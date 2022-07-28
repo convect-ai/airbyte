@@ -1,0 +1,97 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "sku_id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "wms_co_id": {
+      "type": [
+        "null",
+        "integer"
+      ]
+    },
+    "i_id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "qty": {
+      "type": [
+        "null",
+        "integer"
+      ]
+    },
+    "order_lock": {
+      "type": [
+        "null",
+        "integer"
+      ]
+    },
+    "pick_lock": {
+      "type": [
+        "null",
+        "integer"
+      ]
+    },
+    "virtual_qty": {
+      "type": [
+        "null",
+        "integer"
+      ]
+    },
+    "purchase_qty": {
+      "type": [
+        "null",
+        "integer"
+      ]
+    },
+    "return_qty": {
+      "type": [
+        "null",
+        "integer"
+      ]
+    },
+    "in_qty": {
+      "type": [
+        "null",
+        "integer"
+      ]
+    },
+    "defective_qty": {
+      "type": [
+        "null",
+        "integer"
+      ]
+    },
+    "modified": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "format": "date-time"
+    },
+    "min_qty": {
+      "type": [
+        "null",
+        "integer"
+      ]
+    },
+    "max_qty": {
+      "type": [
+        "null",
+        "integer"
+      ]
+    },
+    "lock_qty": {
+      "type": [
+        "null",
+        "integer"
+      ]
+    }
+  }
+}

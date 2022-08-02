@@ -26,7 +26,7 @@
         },
         {
             "stream": {
-                "name": "sku_map",
+                "name": "sku",
                 "supported_sync_modes": [
                     "full_refresh",
                     "incremental"

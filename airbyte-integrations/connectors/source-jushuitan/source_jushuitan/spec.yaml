@@ -29,6 +29,6 @@ connectionSpecification:
     start_date:
       title: Start date to sync all data from
       type: string
-      format: date-time
+      format: date
       default: 2019-01-01
 

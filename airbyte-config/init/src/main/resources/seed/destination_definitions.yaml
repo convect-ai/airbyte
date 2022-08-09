@@ -307,3 +307,11 @@
   documentationUrl: https://docs.airbyte.io/integrations/destinations/google-sheets
   icon: google-sheets.svg
   releaseStage: alpha
+- name: Airtable (Convect AI)
+  destinationDefinitionId: 385261d5-6164-4c51-a5ee-86b2072a6aca
+  dockerRepository: 932478379847.dkr.ecr.us-west-2.amazonaws.com/convect-airbyte/destination-convect-airtable
+  dockerImageTab: dev
+  documentationUrl: https://convect.ai
+  releaseStage: alpha
+  public: false
+  custom: true

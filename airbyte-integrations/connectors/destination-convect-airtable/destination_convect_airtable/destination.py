@@ -2,41 +2,47 @@
 # Copyright (c) 2022 Airbyte, Inc., all rights reserved.
 #
 
+import logging
 
 from typing import Any, Iterable, Mapping
 
 from airbyte_cdk import AirbyteLogger
 from airbyte_cdk.destinations import Destination
-from airbyte_cdk.models import AirbyteConnectionStatus, AirbyteMessage, ConfiguredAirbyteCatalog, Status
+from airbyte_cdk.models import AirbyteConnectionStatus, AirbyteMessage, ConfiguredAirbyteCatalog, Status, Type
+from airbyte_cdk.sources.streams.http.requests_native_auth import TokenAuthenticator
+from .airtable import Airtable
+
+logger = logging.getLogger("airbyte")
+
+STREAM_TABLE_PREFIX = "odp_"
 
 
 class DestinationConvectAirtable(Destination):
     def write(
         self, config: Mapping[str, Any], configured_catalog: ConfiguredAirbyteCatalog, input_messages: Iterable[AirbyteMessage]
     ) -> Iterable[AirbyteMessage]:
+        auth = TokenAuthenticator(token=config["api_key"])
 
-        """
-        TODO
-        Reads the input stream of messages, config, and catalog to write data to the destination.
+        for message in input_messages:
+            if message.type == Type.STATE:
+                yield message
+            elif message.type == Type.RECORD:
+                record = message.record
+                logger.info(f"Processing message from stream '{record.stream}': {record.data}")
 
-        This method returns an iterable (typically a generator of AirbyteMessages via yield) containing state messages received
-        in the input message stream. Outputting a state message means that every AirbyteRecordMessage which came before it has been
-        successfully persisted to the destination. This is used to ensure fault tolerance in the case that a sync fails before fully completing,
-        then the source is given the last state message output from this method as the starting point of the next sync.
+                stream = record.stream
+                source_table = stream[len(STREAM_TABLE_PREFIX):]
+                config_table_name = "table_" + source_table
 
-        :param config: dict of JSON configuration matching the configuration declared in spec.json
-        :param configured_catalog: The Configured Catalog describing the schema of the data being received and how it should be persisted in the
-                                    destination
-        :param input_messages: The stream of input messages received from the source
-        :return: Iterable of AirbyteStateMessages wrapped in AirbyteMessage structs
-        """
-
-        pass
+                if config_table_name in config and config[config_table_name]:
+                    dest_table = config[config_table_name]
+                    Airtable.write_record(auth, config["base_id"], dest_table, record.data)
+            else:
+                logger.info(f"Received message of unknown type: {message.__dict__}")
 
     def check(self, logger: AirbyteLogger, config: Mapping[str, Any]) -> AirbyteConnectionStatus:
         """
-        Tests if the input configuration can be used to successfully connect to the destination with the needed permissions
-            e.g: if a provided API token or password can be used to connect and write to the destination.
+        Tests if the input configuration can be used to successfully connect to the destination with the needed permissions.
 
         :param logger: Logging object to display debug/info/error to the logs
             (logs will not be accessible via airbyte UI if they are not passed to this logger)
@@ -45,9 +51,13 @@ class DestinationConvectAirtable(Destination):
 
         :return: AirbyteConnectionStatus indicating a Success or Failure
         """
-        try:
-            # TODO
-
-            return AirbyteConnectionStatus(status=Status.SUCCEEDED)
-        except Exception as e:
-            return AirbyteConnectionStatus(status=Status.FAILED, message=f"An exception occurred: {repr(e)}")
+        auth = TokenAuthenticator(token=config["api_key"])
+        for key in config:
+            if key.startswith("table_"):
+                table = config[key]
+                if table:
+                    try:
+                        Airtable.check_table_exists(auth, config["base_id"], table)
+                    except Exception as e:
+                        return AirbyteConnectionStatus(status=Status.FAILED, message=f"An exception occurred: {repr(e)}")
+        return AirbyteConnectionStatus(status=Status.SUCCEEDED)

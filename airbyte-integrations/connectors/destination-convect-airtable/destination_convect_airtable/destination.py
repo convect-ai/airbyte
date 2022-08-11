@@ -31,11 +31,14 @@ class DestinationConvectAirtable(Destination):
                 logger.info(f"Processing message from stream '{record.stream}': {record.data}")
 
                 stream = record.stream
-                source_table = stream[len(STREAM_TABLE_PREFIX):]
+                source_table = stream[6+len(STREAM_TABLE_PREFIX):]
                 config_table_name = "table_" + source_table
+                logger.info(f"config_table_name={config_table_name}")
 
                 if config_table_name in config and config[config_table_name]:
                     dest_table = config[config_table_name]
+
+                    logger.info(f"Writing to Airtable '{dest_table}': {record.data}")
                     Airtable.write_record(auth, config["base_id"], dest_table, record.data)
             else:
                 logger.info(f"Received message of unknown type: {message.__dict__}")

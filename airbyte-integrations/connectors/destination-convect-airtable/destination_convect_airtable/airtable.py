@@ -34,6 +34,7 @@ class Airtable:
         }
         try:
             response = requests.post(url, headers=auth.get_auth_header(), json=body)
+            logger.info(f"Airtable response: {response}")
             response.raise_for_status()
         except requests.exceptions.HTTPError as e:
             logger.error(f"Error while posting to {url}: {json.dumps(body)}", e)

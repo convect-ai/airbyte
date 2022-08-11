@@ -28,13 +28,13 @@
         "examples": ["app1234567890"],
 	"order": 2
       },
-      "table_orders": {
+      "table_sales_order": {
         "type": "string",
         "description": "The Airtable table to store orders data.",
         "title": "Table for orders",
 	"order": 3
       },
-      "table_product_variants": {
+      "table_product_variant": {
         "type": "string",
         "description": "The Airtable table to store product variants data.",
         "title": "Table for product variants",

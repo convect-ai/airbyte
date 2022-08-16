@@ -1,5 +1,6 @@
 from airbyte_cdk.sources.streams.http.requests_native_auth.oauth import Oauth2Authenticator
 from typing import Any, List, Mapping, MutableMapping, Tuple
+from . import URL_MAP
 import json
 import requests
 
@@ -9,8 +10,8 @@ class WayfairAuthenticator(Oauth2Authenticator):
 
         self.config = config
         credentials = self.config.get("credentials", None)
-        auth_url = self.config.get("auth_url",None)
-        audience_url = self.config.get("audience_url",None)
+        auth_url = URL_MAP[self.config.get("environment")]["auth"]
+        audience_url = URL_MAP[self.config.get("environment")]["audience"]
         assert auth_url is not None
         assert audience_url is not None
         assert credentials is not None

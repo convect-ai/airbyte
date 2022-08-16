@@ -19,6 +19,7 @@ from airbyte_cdk.sources.streams.core import package_name_from_class
 from airbyte_cdk.sources.streams.core import IncrementalMixin
 from .utils import ResourceLoader
 from .auth import WayfairAuthenticator
+from . import URL_MAP
 from functools import cache
 
 """
@@ -47,11 +48,11 @@ class WayfairStream(GraphqlStream, ABC):
 
     @property
     def page_limit(self):
-        return min(max(int(self.config.get("page_limit", 250)),1),1000)
+        return 100  # min(max(int(self.config.get("page_limit", 250)),1),1000)
 
     @property
     def url_base(self):
-        return self.config.get("api_endpoint", "https://sandbox.api.wayfair.com/v1/graphql")
+        return URL_MAP[self.config.get("environment")]["api"]
 
     @cache
     def get_graphql_query(self):
@@ -61,7 +62,7 @@ class WayfairStream(GraphqlStream, ABC):
 
     def get_json_schema(self) -> Mapping[str, Any]:
         # self.logger.info(f"load json schema for {self.__class__}")
-        depth_limit = min(max(int(self.config.get("depth_limit",3)),1),5)
+        depth_limit = 3  # min(max(int(self.config.get("depth_limit",3)),1),5)
         return ResourceLoader(package_name_from_class(self.__class__)).\
             get_schema(self.name, max_depth=depth_limit)
 
@@ -165,8 +166,9 @@ class PurchaseOrders(IncrementalWayfairStream):
             stream_state = {}
         curr_date_time = datetime.datetime.utcnow()
         cursor_datetime = dateutil.parser.isoparse(stream_state.get(self.cursor_field, self.config.get("start_date")))
-        stream_start_datetime = cursor_datetime - datetime.timedelta(hours=max(int(self.config.get("look_back_horizon_in_hours")),0))
-        stream_slices_number = min(max(int(self.config.get('stream_slices_number', 1)),1),100)
+        # Look back 24 hours beyond the current cursor
+        stream_start_datetime = cursor_datetime - datetime.timedelta(hours=24)
+        stream_slices_number = 12  # min(max(int(self.config.get('stream_slices_number', 1)),1),100)
         time_window_in_seconds = (curr_date_time - stream_start_datetime).total_seconds() / stream_slices_number
         for i in range(stream_slices_number):
             if i == (stream_slices_number - 1):
@@ -259,11 +261,7 @@ class SourceWayfair(AbstractSource):
         try:
             access_token = authenticator.get_access_token()
             if access_token:
-                api_endpoint = config.get("api_endpoint")
-                if 'sandbox' in api_endpoint:
-                    url = "https://sandbox.api.wayfair.com/v1/demo/clock"
-                else:
-                    url = "https://api.wayfair.com/v1/demo/clock"
+                url = URL_MAP[config.get("environment")]["check"]
                 headers = {
                     'Authorization': 'Bearer ' + access_token,
                     'Content-Type': 'application/json',

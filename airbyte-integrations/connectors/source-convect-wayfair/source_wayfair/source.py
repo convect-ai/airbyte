@@ -8,13 +8,10 @@ import datetime
 import os
 from abc import ABC, abstractmethod
 from typing import Any, Iterable, List, Mapping, MutableMapping, Optional, Tuple, Dict
-from airbyte_cdk.models import SyncMode
-from airbyte_cdk.sources.utils.sentry import AirbyteSentry
 import requests
 from airbyte_cdk.sources import AbstractSource
 from airbyte_cdk.sources.streams import Stream
 from .stream import GraphqlStream
-from airbyte_cdk.sources.streams.http.auth import TokenAuthenticator
 from airbyte_cdk.sources.streams.core import package_name_from_class
 from airbyte_cdk.sources.streams.core import IncrementalMixin
 from .utils import ResourceLoader

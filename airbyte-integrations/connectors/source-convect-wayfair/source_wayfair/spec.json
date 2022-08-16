@@ -42,7 +42,7 @@
         "type": "string",
         "title": "Environment",
         "description": "The environment in which you'd like to replicate data for Wayfair.",
-        "default": "Sandbox",
+        "default": "Production",
         "enum": ["Production", "Sandbox"]
       },
       "start_date": {

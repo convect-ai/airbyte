@@ -2,12 +2,6 @@
 # Copyright (c) 2021 Airbyte, Inc., all rights reserved.
 #
 
-
-from .source import SourceWayfair
-
-__all__ = ["SourceWayfair"]
-
-
 URL_MAP = {
     "Sandbox": {
         "auth": "https://sso.auth.wayfair.com/oauth/token",
@@ -22,3 +16,7 @@ URL_MAP = {
         "check": "https://api.wayfair.com/v1/demo/clock",
     },
 }
+
+from .source import SourceWayfair
+
+__all__ = ["SourceWayfair"]

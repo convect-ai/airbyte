@@ -5,13 +5,14 @@
     "title": "Wayfair Spec",
     "type": "object",
     "required": [
-      "credentials","auth_url","audience_url","start_date",
-      "look_back_horizon_in_hours","stream_slices_number",
-      "api_endpoint","page_limit","depth_limit","open_order_only"
+      "credentials",
+      "start_date",
+      "open_order_only"
     ],
     "additionalProperties": false,
     "properties": {
       "credentials": {
+        "order": 0,
         "title": "Wayfair Authorization Method",
         "type": "object",
         "oneOf": [
@@ -36,15 +37,16 @@
           }
         ]
       },
-      "auth_url": {
+      "environment": {
+        "order": 1,
         "type": "string",
-        "default": "https://sso.auth.wayfair.com/oauth/token"
-      },
-      "audience_url": {
-        "type": "string",
-        "default": "https://sandbox.api.wayfair.com/"
+        "title": "Environment",
+        "description": "The environment in which you'd like to replicate data for Wayfair.",
+        "default": "Production",
+        "enum": ["Production", "Sandbox"]
       },
       "start_date": {
+        "order": 2,
         "title": "Start Date",
         "type": "string",
         "description": "The date you would like to replicate data from. Format: YYYY-MM-DD. Any data before this date will not be replicated.",
@@ -53,39 +55,12 @@
         ],
         "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
       },
-      "look_back_horizon_in_hours": {
-        "type": "string",
-        "default": "24",
-        "pattern": "^[0-9]+$",
-        "description": "number of hours look back beyond the current cursor time point when do the incremental sync (>=0)"
-      },
-      "stream_slices_number": {
-        "type": "string",
-        "default": "12",
-        "pattern": "^[0-9]+$",
-        "description": "number of stream slice when do the sync (1~100)"
-      },
-      "api_endpoint": {
-        "type": "string",
-        "description": "Wayfair graphql endpoint"
-      },
-      "page_limit": {
-        "type": "string",
-        "default": "50",
-        "pattern": "^[0-9]+$",
-        "description": "page limit for each stream/stream slice (1~1000)"
-      },
-      "depth_limit": {
-        "type": "string",
-        "default": "3",
-        "pattern": "^[1,2,3,4,5]$",
-        "description": "the graphql query depth (1~5)"
-      },
       "open_order_only": {
+        "order": 3,
         "type": "boolean",
-        "title": "open order only",
-        "default": true,
-        "description": "whether only sync open order"
+        "title": "Open order only",
+        "default": false,
+        "description": "Check the box if only open orders should be synced from Wayfair."
       }
     }
   }

@@ -9,7 +9,6 @@ from airbyte_cdk.models import SyncMode
 from abc import ABC, abstractmethod
 from typing import Any, Iterable, List, Mapping, MutableMapping, Optional, Union
 from airbyte_cdk.sources.streams.core import Stream
-from airbyte_cdk.sources.utils.sentry import AirbyteSentry
 from airbyte_cdk.sources.streams.http.rate_limiting import default_backoff_handler, user_defined_backoff_handler
 from airbyte_cdk.sources.streams.http.exceptions import DefaultBackoffException, UserDefinedBackoffException
 from requests.auth import AuthBase
@@ -89,33 +88,32 @@ class GraphqlStream(HttpStream, ABC):
         pagination_complete = False
 
         next_page_token = None
-        with AirbyteSentry.start_transaction("read_records", self.name), AirbyteSentry.start_transaction_span("read_records"):
-            while not pagination_complete:
-                request = self._create_graphql_request(
-                    headers=self.request_headers(stream_state=stream_state, stream_slice=stream_slice, next_page_token=next_page_token),
-                    graphql_query=self.graphql_query(stream_state=stream_state, stream_slice=stream_slice, next_page_token=next_page_token),
-                    graphsql_variables=self.graphql_variables(stream_state=stream_state, stream_slice=stream_slice,
-                                                              next_page_token=next_page_token),
-                    params=self.request_params(stream_state=stream_state, stream_slice=stream_slice, next_page_token=next_page_token),
-                )
+        while not pagination_complete:
+            request = self._create_graphql_request(
+                headers=self.request_headers(stream_state=stream_state, stream_slice=stream_slice, next_page_token=next_page_token),
+                graphql_query=self.graphql_query(stream_state=stream_state, stream_slice=stream_slice, next_page_token=next_page_token),
+                graphsql_variables=self.graphql_variables(stream_state=stream_state, stream_slice=stream_slice,
+                                                            next_page_token=next_page_token),
+                params=self.request_params(stream_state=stream_state, stream_slice=stream_slice, next_page_token=next_page_token),
+            )
 
-                request_kwargs = self.request_kwargs(stream_state=stream_state, stream_slice=stream_slice,
-                                                     next_page_token=next_page_token)
-                if self.use_cache:
-                    # use context manager to handle and store cassette metadata
-                    with self.cache_file as cass:
-                        self.cassete = cass
-                        # vcr tries to find records based on the request, if such records exist, return from cache file
-                        # else make a request and save record in cache file
-                        response = self._send_request(request, request_kwargs)
-
-                else:
+            request_kwargs = self.request_kwargs(stream_state=stream_state, stream_slice=stream_slice,
+                                                    next_page_token=next_page_token)
+            if self.use_cache:
+                # use context manager to handle and store cassette metadata
+                with self.cache_file as cass:
+                    self.cassete = cass
+                    # vcr tries to find records based on the request, if such records exist, return from cache file
+                    # else make a request and save record in cache file
                     response = self._send_request(request, request_kwargs)
-                yield from self.parse_response(response, stream_state=stream_state, stream_slice=stream_slice)
 
-                next_page_token = self.graphql_next_page_token(next_page_token, response)
-                if not next_page_token:
-                    pagination_complete = True
+            else:
+                response = self._send_request(request, request_kwargs)
+            yield from self.parse_response(response, stream_state=stream_state, stream_slice=stream_slice)
 
-            # Always return an empty generator just in case no records were ever yielded
-            yield from []
+            next_page_token = self.graphql_next_page_token(next_page_token, response)
+            if not next_page_token:
+                pagination_complete = True
+
+        # Always return an empty generator just in case no records were ever yielded
+        yield from []

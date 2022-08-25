@@ -1,0 +1,6 @@
+{
+  "app_key": "b0b7d1db226d4216a3d58df9ffa2dde5",
+  "app_secret": "99c4cef262f34ca882975a7064de0b87",
+  "access_token": "some_invalid_token",
+  "use_sandbox": true
+}

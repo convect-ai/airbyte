@@ -1,0 +1,41 @@
+{
+    "streams": [
+        {
+            "stream": {
+                "name": "shop",
+                "supported_sync_modes": [
+                    "full_refresh"
+                ],
+                "json_schema": {},
+                "source_defined_cursor": true
+            },
+            "sync_mode": "full_refresh",
+            "destination_sync_mode": "overwrite"
+        },
+        {
+            "stream": {
+                "name": "warehouse",
+                "supported_sync_modes": [
+                    "full_refresh"
+                ],
+                "json_schema": {},
+                "source_defined_cursor": true
+            },
+            "sync_mode": "full_refresh",
+            "destination_sync_mode": "overwrite"
+        },
+        {
+            "stream": {
+                "name": "sku",
+                "supported_sync_modes": [
+                    "full_refresh",
+                    "incremental"
+                ],
+                "json_schema": {},
+                "source_defined_cursor": true
+            },
+            "sync_mode": "incremental",
+            "destination_sync_mode": "append"
+        }
+    ]
+}

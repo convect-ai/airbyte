@@ -1,0 +1,123 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "co_id": {
+      "type": [
+        "null",
+        "integer"
+      ]
+    },
+    "shop_id": {
+      "type": [
+        "null",
+        "integer"
+      ]
+    },
+    "channel": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "i_id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "sku_id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "shop_i_id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "shop_sku_id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "modified": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "enabled": {
+      "type": "boolean"
+    },
+    "c_id": {
+      "type": [
+        "null",
+        "integer"
+      ]
+    },
+    "raw_sku_id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "shop_price": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "name": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "properties_value": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "pic": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "created": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "format": "date-time"
+    },
+    "pull_off_time": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "format": "date-time"
+    },
+    "outer_sku_code": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "type": {
+      "type": [
+        "null",
+        "integer"
+      ]
+    },
+    "shop_qty": {
+      "type": [
+        "null",
+        "number"
+      ]
+    }
+  }
+}

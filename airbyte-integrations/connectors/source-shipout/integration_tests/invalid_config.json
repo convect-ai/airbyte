@@ -1,0 +1,8 @@
+{
+    "credentials": {
+        "authorization": "something",
+        "app_key": "some app key",
+        "app_secret": "some secret"
+    },
+    "use_sandbox": true
+}

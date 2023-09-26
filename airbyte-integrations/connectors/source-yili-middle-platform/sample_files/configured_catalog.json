@@ -1,0 +1,150 @@
+{
+  "streams": [
+    {
+      "stream": {
+        "name": "yili_middle_platform",
+        "json_schema": {
+          "$schema": "http://json-schema.org/draft-04/schema#",
+          "type": "object",
+          "properties": {
+            "z_year_month": {
+              "type": "string"
+            },
+            "product_no": {
+              "type": "string"
+            },
+            "product_name": {
+              "type": "string"
+            },
+            "logical_node_no": {
+              "type": "string"
+            },
+            "logical_node_name": {
+              "type": "string"
+            },
+            "z_plan_prod_qty": {
+              "type": "string"
+            },
+            "z_adj_prod_qty": {
+              "type": "string"
+            },
+            "z_plan_prod_day1": {
+              "type": "string"
+            },
+            "z_plan_prod_day2": {
+              "type": "string"
+            },
+            "z_plan_prod_day3": {
+              "type": "string"
+            },
+            "z_plan_prod_day4": {
+              "type": "string"
+            },
+            "z_plan_prod_day5": {
+              "type": "string"
+            },
+            "z_plan_prod_day6": {
+              "type": "string"
+            },
+            "z_plan_prod_day7": {
+              "type": "string"
+            },
+            "z_plan_prod_day8": {
+              "type": "string"
+            },
+            "z_plan_prod_day9": {
+              "type": "string"
+            },
+            "z_plan_prod_day10": {
+              "type": "string"
+            },
+            "z_plan_prod_day11": {
+              "type": "string"
+            },
+            "z_plan_prod_day12": {
+              "type": "string"
+            },
+            "z_plan_prod_day13": {
+              "type": "string"
+            },
+            "z_plan_prod_day14": {
+              "type": "string"
+            },
+            "z_plan_prod_day15": {
+              "type": "string"
+            },
+            "z_plan_prod_day16": {
+              "type": "string"
+            },
+            "z_plan_prod_day17": {
+              "type": "string"
+            },
+            "z_plan_prod_day18": {
+              "type": "string"
+            },
+            "z_plan_prod_day19": {
+              "type": "string"
+            },
+            "z_plan_prod_day20": {
+              "type": "string"
+            },
+            "z_plan_prod_day21": {
+              "type": "string"
+            },
+            "z_plan_prod_day22": {
+              "type": "string"
+            },
+            "z_plan_prod_day23": {
+              "type": "string"
+            },
+            "z_plan_prod_day24": {
+              "type": "string"
+            },
+            "z_plan_prod_day25": {
+              "type": "string"
+            },
+            "z_plan_prod_day26": {
+              "type": "string"
+            },
+            "z_plan_prod_day27": {
+              "type": "string"
+            },
+            "z_plan_prod_day28": {
+              "type": "string"
+            },
+            "z_plan_prod_day29": {
+              "type": "string"
+            },
+            "z_plan_prod_day30": {
+              "type": "string"
+            },
+            "z_plan_prod_day31": {
+              "type": "string"
+            },
+            "deletion_flag": {
+              "type": "string"
+            },
+            "create_user": {
+              "type": "string"
+            },
+            "create_time": {
+              "type": "string"
+            },
+            "update_user": {
+              "type": "string"
+            },
+            "update_time": {
+              "type": "string"
+            },
+            "ds": {
+              "type": "string"
+            }
+          }
+        },
+        "supported_sync_modes": ["full_refresh"]
+      },
+      "sync_mode": "full_refresh",
+      "destination_sync_mode": "overwrite"
+    }
+  ]
+}

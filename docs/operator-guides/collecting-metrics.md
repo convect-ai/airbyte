@@ -1,61 +1,145 @@
-# Collecting Metrics
+# Monitoring Airbyte
 
-Airbyte supports two ways to collect metrics - using datadog or open telemetry. 
-Fill in `METRIC_CLIENT` field in `.env` file to get started!
 
-# Open Telemetry
+Airbyte offers you various ways to monitor your ELT pipelines. These options range from using open-source tools to integrating with enterprise-grade SaaS platforms.
 
-1. In `.env` change `METRIC_CLIENT` to `otel`. 
-2. Similarly, configure `OTEL_COLLECTOR_ENDPOINT` to tell Airbyte where to send metrics RPC to.
+Here's a quick overview:
+* Connection Logging: All Airbyte instances provide extensive logs for each connector, giving detailed reports on the data synchronization process. This is available across all Airbyte offerings.
+* [Airbyte Datadog Integration](#airbyte-datadog-integration): Airbyte customers can leverage our integration with Datadog. This lets you monitor and analyze your data pipelines right within your Datadog dashboards at no additional cost.
+* Airbyte OpenTelemetry (OTEL) Integration: Coming soon, this will allow you to push metrics to your self-hosted monitoring solution using OpenTelemetry.
 
-## Example
+Please browse the sections below for more details on each option and how to set it up.
 
-### Run Opentelemetry and Airbyte locally
+## Airbyte Datadog Integration
 
-In this example we will run Airbyte locally along with an Open Telemetry Collector. The Open telemetry collector
-will expose port 4317 to the localhost as the receiving endpoint.
 
-![](../.gitbook/assets/open_telemetry_example.png)
+:::info
+Monitoring your Airbyte instance using Datadog is an early preview feature and still in development.
+Expect changes to this feature and the configuration to happen in the future. This feature will be
+only for Airbyte Enterprise customers in the future.
+:::
 
-Steps:
+![Datadog's Airbyte Integration Dashboard](assets/DatadogAirbyteIntegration_OutOfTheBox_Dashboard.png)
 
-1. Setting up Open telemetry. In this example we will use the repository from `opentelemetry-java-docs`. 
-Run the following commands to have it up and running.
+Airbyte's new integration with Datadog brings the convenience of monitoring and analyzing your Airbyte data pipelines directly within your Datadog dashboards. 
+This integration brings forth new `airbyte.*` metrics along with new dashboards. The list of metrics is found [here](https://docs.datadoghq.com/integrations/airbyte/#data-collected).
 
-```bash
-  git clone https://github.com/open-telemetry/opentelemetry-java-docs
-  cd opentelemetry-java-docs/otlp/docker
-  docker-compose up
+### Setup Instructions
+
+Setting up this integration for Airbyte instances deployed with Docker involves five straightforward steps:
+
+
+1. **Set Datadog Airbyte Config:** Create or configure the `datadog.yaml` file with the contents below:
+
+```yaml
+dogstatsd_mapper_profiles:
+  - name: airbyte_worker
+    prefix: "worker."
+    mappings:
+      - match: "worker.temporal_workflow_*"
+        name: "airbyte.worker.temporal_workflow.$1"
+      - match: "worker.worker_*"
+        name: "airbyte.worker.$1"
+      - match: "worker.state_commit_*"
+        name: "airbyte.worker.state_commit.$1"
+      - match: "worker.job_*"
+        name: "airbyte.worker.job.$1"
+      - match: "worker.attempt_*"
+        name: "airbyte.worker.attempt.$1"
+      - match: "worker.activity_*"
+        name: "airbyte.worker.activity.$1"
+      - match: "worker.*"
+        name: "airbyte.worker.$1"
+  - name: airbyte_cron
+    prefix: "cron."
+    mappings:
+      - match: "cron.cron_jobs_run"
+        name: "airbyte.cron.jobs_run"
+      - match: "cron.*"
+        name: "airbyte.cron.$1"
+  - name: airbyte_metrics_reporter
+    prefix: "metrics-reporter."
+    mappings:
+      - match: "metrics-reporter.*"
+        name: "airbyte.metrics_reporter.$1"
+  - name: airbyte_orchestrator
+    prefix: "orchestrator."
+    mappings:
+      - match: "orchestrator.*"
+        name: "airbyte.orchestrator.$1"
+  - name: airbyte_server
+    prefix: "server."
+    mappings:
+      - match: "server.*"
+        name: "airbyte.server.$1"
+  - name: airbyte_general
+    prefix: "airbyte."
+    mappings:
+      - match: "airbyte.worker.temporal_workflow_*"
+        name: "airbyte.worker.temporal_workflow.$1"
+      - match: "airbyte.worker.worker_*"
+        name: "airbyte.worker.$1"
+      - match: "airbyte.worker.state_commit_*"
+        name: "airbyte.worker.state_commit.$1"
+      - match: "airbyte.worker.job_*"
+        name: "airbyte.worker.job.$1"
+      - match: "airbyte.worker.attempt_*"
+        name: "airbyte.worker.attempt.$1"
+      - match: "airbyte.worker.activity_*"
+        name: "airbyte.worker.activity.$1"
+      - match: "airbyte.cron.cron_jobs_run"
+        name: "airbyte.cron.jobs_run"
 ```
 
-2. Configure Airbyte `.env` file. 
-   1. Change `METRIC_CLIENT` to `otel` to indicate Airbyte to use Open telemetry to emit metric data.
-   2. Change `OTEL_COLLECTOR_ENDPOINT` to `"http://host.docker.internal:4317"` because Open Telemetry 
-   Collector has enabled port forward from localhost:4317 to container port 4317. To send data to Collector container port 4317, we want to need to export data to physical machine's localhost:4317, which in docker will be represented as `http://host.docker.internal:4317`. 
-   > Do *not* use `localhost:4317` or you will send data to the same container where Airbyte Worker is running.
-   3. Start Airbyte server by running `docker-compose up` under airbyte repository. Go to `localhost:8000` to visit Airbyte and start a sync, then go to `localhost:9090` to access Prometheus - you should be able to see the metrics there. Alternatively, 
+2. **Add Datadog Agent and Mount Config:** If the Datadog Agent is not yet deployed to your instances running Airbyte, you can modify the provided  `docker-compose.yaml` file in the Airbyte repository to include the Datadog Agent. For the Datadog agent to submit metrics, you will need to add an [API key](https://docs.datadoghq.com/account_management/api-app-keys/#add-an-api-key-or-client-token). Then, be sure to properly mount your `datadog.yaml` file as a Docker volume:
 
-### Run Opentelemetry and Airbyte on kubernetes
-
-> **Prerequisite:** Read https://github.com/airbytehq/airbyte/blob/master/docs/deploying-airbyte/on-kubernetes.md to understand how to start Airbyte on Kubernetes
-
-We will use `stable` in this example.
-
-Steps:
-1. Run open telemetry collector in the same Kubernetes context. Here we follow example in [OpenTelemetry doc](https://opentelemetry.io/docs/collector/getting-started/#kubernetes)
-2. edit `kube/overlays/stable/.env` and add the following lines:
-
-```aidl
-METRIC_CLIENT=otel
-OTEL_COLLECTOR_ENDPOINT=<address>
+```yaml
+  dd-agent:
+    container_name: dd-agent
+    image: gcr.io/datadoghq/agent:7
+    pid: host
+    environment:
+      - DD_API_KEY={REPLACE-WITH-DATADOG-API-KEY}
+      - DD_SITE=datadoghq.com
+      - DD_HOSTNAME={REPLACE-WITH-DATADOG-HOSTNAME}
+      - DD_DOGSTATSD_NON_LOCAL_TRAFFIC=true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /proc/:/host/proc/:ro
+      - /sys/fs/cgroup:/host/sys/fs/cgroup:ro
+      - {REPLACE-WITH-PATH-TO}/datadog.yaml:/etc/datadog-agent/datadog.yaml
+    networks:
+      - airbyte_internal
 ```
 
-If you started open telemetry collector in the link above, the address should be `http://otel-collector:4317`. 
-Note the format - unlike the base `.env`, there is no quote in `.env` file under kubernetes.
+3. **Update Docker Compose Configuration**: Modify your `docker-compose.yaml` file in the Airbyte repository to include the `metrics-reporter` container. This submits Airbyte metrics to the Datadog Agent:
 
-# Datadog
-TBD
+```yaml
+  metric-reporter:
+    image: airbyte/metrics-reporter:${VERSION}
+    container_name: metric-reporter
+    networks:
+      - airbyte_internal
+    environment:
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD}
+      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_USER=${DATABASE_USER}
+      - DD_AGENT_HOST=${DD_AGENT_HOST}
+      - DD_DOGSTATSD_PORT=${DD_DOGSTATSD_PORT}
+      - METRIC_CLIENT=${METRIC_CLIENT}
+      - PUBLISH_METRICS=${PUBLISH_METRICS}
+```
 
-## Metrics
-Visit [OssMetricsRegistry.java](https://github.com/airbytehq/airbyte/blob/master/airbyte-metrics/metrics-lib/src/main/java/io/airbyte/metrics/lib/OssMetricsRegistry.java) to get a complete list of metrics Airbyte is sending.
+4. **Set Environment Variables**: Amend your `.env` file with the correct values needed by `docker-compose.yaml`:
+
+```yaml
+PUBLISH_METRICS=true
+METRIC_CLIENT=datadog
+DD_AGENT_HOST=dd-agent
+DD_DOGSTATSD_PORT=8125
+```
+
+5. **Re-deploy Airbyte and the Datadog Agent**: With the updated configurations, you're ready to deploy your Airbyte application by running `docker compose up`.
+
+
 

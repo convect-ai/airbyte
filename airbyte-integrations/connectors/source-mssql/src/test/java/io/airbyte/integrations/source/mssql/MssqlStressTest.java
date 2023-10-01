@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.integrations.source.mssql;
@@ -7,15 +7,17 @@ package io.airbyte.integrations.source.mssql;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableMap;
+import io.airbyte.cdk.db.factory.DataSourceFactory;
+import io.airbyte.cdk.db.factory.DatabaseDriver;
+import io.airbyte.cdk.db.jdbc.DefaultJdbcDatabase;
+import io.airbyte.cdk.db.jdbc.JdbcDatabase;
+import io.airbyte.cdk.db.jdbc.JdbcUtils;
+import io.airbyte.cdk.integrations.source.jdbc.AbstractJdbcSource;
+import io.airbyte.cdk.integrations.source.jdbc.test.JdbcStressTest;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.string.Strings;
-import io.airbyte.db.factory.DataSourceFactory;
-import io.airbyte.db.factory.DatabaseDriver;
-import io.airbyte.db.jdbc.DefaultJdbcDatabase;
-import io.airbyte.db.jdbc.JdbcDatabase;
-import io.airbyte.integrations.source.jdbc.AbstractJdbcSource;
-import io.airbyte.integrations.source.jdbc.test.JdbcStressTest;
 import java.sql.JDBCType;
+import java.util.Map;
 import java.util.Optional;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.AfterAll;
@@ -39,19 +41,20 @@ public class MssqlStressTest extends JdbcStressTest {
   @BeforeEach
   public void setup() throws Exception {
     final JsonNode configWithoutDbName = Jsons.jsonNode(ImmutableMap.builder()
-        .put("host", dbContainer.getHost())
-        .put("port", dbContainer.getFirstMappedPort())
-        .put("username", dbContainer.getUsername())
-        .put("password", dbContainer.getPassword())
+        .put(JdbcUtils.HOST_KEY, dbContainer.getHost())
+        .put(JdbcUtils.PORT_KEY, dbContainer.getFirstMappedPort())
+        .put(JdbcUtils.USERNAME_KEY, dbContainer.getUsername())
+        .put(JdbcUtils.PASSWORD_KEY, dbContainer.getPassword())
         .build());
 
     final DataSource dataSource = DataSourceFactory.create(
-        configWithoutDbName.get("username").asText(),
-        configWithoutDbName.get("password").asText(),
+        configWithoutDbName.get(JdbcUtils.USERNAME_KEY).asText(),
+        configWithoutDbName.get(JdbcUtils.PASSWORD_KEY).asText(),
         DatabaseDriver.MSSQLSERVER.getDriverClassName(),
-        String.format("jdbc:sqlserver://%s:%d",
-            configWithoutDbName.get("host").asText(),
-            configWithoutDbName.get("port").asInt()));
+        String.format("jdbc:sqlserver://%s:%d;",
+            configWithoutDbName.get(JdbcUtils.HOST_KEY).asText(),
+            configWithoutDbName.get(JdbcUtils.PORT_KEY).asInt()),
+        Map.of("encrypt", "false"));
 
     try {
       final JdbcDatabase database = new DefaultJdbcDatabase(dataSource);
@@ -61,7 +64,8 @@ public class MssqlStressTest extends JdbcStressTest {
       database.execute(ctx -> ctx.createStatement().execute(String.format("CREATE DATABASE %s;", dbName)));
 
       config = Jsons.clone(configWithoutDbName);
-      ((ObjectNode) config).put("database", dbName);
+      ((ObjectNode) config).put(JdbcUtils.DATABASE_KEY, dbName);
+      ((ObjectNode) config).put("is_test", true);
 
       super.setup();
     } finally {

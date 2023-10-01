@@ -1,24 +1,30 @@
 #
-# Copyright (c) 2022 Airbyte, Inc., all rights reserved.
+# Copyright (c) 2023 Airbyte, Inc., all rights reserved.
 #
 
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from enum import Enum
-from typing import Any, Mapping, MutableMapping, Optional, Union
+from typing import Any, Callable, Mapping, MutableMapping, Optional, Union
 
 import requests
+from airbyte_cdk.sources.declarative.auth.declarative_authenticator import DeclarativeAuthenticator
 from airbyte_cdk.sources.declarative.requesters.error_handlers.response_status import ResponseStatus
-from requests.auth import AuthBase
+from airbyte_cdk.sources.declarative.requesters.request_options.request_options_provider import RequestOptionsProvider
+from airbyte_cdk.sources.declarative.types import StreamSlice, StreamState
 
 
 class HttpMethod(Enum):
+    """
+    Http Method to use when submitting an outgoing HTTP request
+    """
+
     GET = "GET"
     POST = "POST"
 
 
-class Requester(ABC):
+class Requester(RequestOptionsProvider):
     @abstractmethod
-    def get_authenticator(self) -> AuthBase:
+    def get_authenticator(self) -> DeclarativeAuthenticator:
         """
         Specifies the authenticator to use when submitting requests
         """
@@ -31,7 +37,13 @@ class Requester(ABC):
         """
 
     @abstractmethod
-    def get_path(self, *, stream_state: Mapping[str, Any], stream_slice: Mapping[str, Any], next_page_token: Mapping[str, Any]) -> str:
+    def get_path(
+        self,
+        *,
+        stream_state: Optional[StreamState],
+        stream_slice: Optional[StreamSlice],
+        next_page_token: Optional[Mapping[str, Any]],
+    ) -> str:
         """
         Returns the URL path for the API endpoint e.g: if you wanted to hit https://myapi.com/v1/some_entity then this should return "some_entity"
         """
@@ -43,11 +55,12 @@ class Requester(ABC):
         """
 
     @abstractmethod
-    def request_params(
+    def get_request_params(
         self,
-        stream_state: Mapping[str, Any],
-        stream_slice: Mapping[str, Any] = None,
-        next_page_token: Mapping[str, Any] = None,
+        *,
+        stream_state: Optional[StreamState] = None,
+        stream_slice: Optional[StreamSlice] = None,
+        next_page_token: Optional[Mapping[str, Any]] = None,
     ) -> MutableMapping[str, Any]:
         """
         Specifies the query parameters that should be set on an outgoing HTTP request given the inputs.
@@ -56,9 +69,9 @@ class Requester(ABC):
         """
 
     @abstractmethod
-    def should_retry(self, response: requests.Response) -> ResponseStatus:
+    def interpret_response_status(self, response: requests.Response) -> ResponseStatus:
         """
-        Specifies conditions for backoff based on the response from the server.
+        Specifies conditions for backoff, error handling and reporting based on the response from the server.
 
         By default, back off on the following HTTP response statuses:
          - 429 (Too Many Requests) indicating rate limiting
@@ -68,20 +81,25 @@ class Requester(ABC):
         """
 
     @abstractmethod
-    def request_headers(
-        self, stream_state: Mapping[str, Any], stream_slice: Mapping[str, Any] = None, next_page_token: Mapping[str, Any] = None
+    def get_request_headers(
+        self,
+        *,
+        stream_state: Optional[StreamState] = None,
+        stream_slice: Optional[StreamSlice] = None,
+        next_page_token: Optional[Mapping[str, Any]] = None,
     ) -> Mapping[str, Any]:
         """
         Return any non-auth headers. Authentication headers will overwrite any overlapping headers returned from this method.
         """
 
     @abstractmethod
-    def request_body_data(
+    def get_request_body_data(
         self,
-        stream_state: Mapping[str, Any],
-        stream_slice: Mapping[str, Any] = None,
-        next_page_token: Mapping[str, Any] = None,
-    ) -> Optional[Union[Mapping, str]]:
+        *,
+        stream_state: Optional[StreamState] = None,
+        stream_slice: Optional[StreamSlice] = None,
+        next_page_token: Optional[Mapping[str, Any]] = None,
+    ) -> Optional[Mapping[str, Any]]:
         """
         Specifies how to populate the body of the request with a non-JSON payload.
 
@@ -93,12 +111,13 @@ class Requester(ABC):
         """
 
     @abstractmethod
-    def request_body_json(
+    def get_request_body_json(
         self,
-        stream_state: Mapping[str, Any],
-        stream_slice: Mapping[str, Any] = None,
-        next_page_token: Mapping[str, Any] = None,
-    ) -> Optional[Mapping]:
+        *,
+        stream_state: Optional[StreamState] = None,
+        stream_slice: Optional[StreamSlice] = None,
+        next_page_token: Optional[Mapping[str, Any]] = None,
+    ) -> Optional[Mapping[str, Any]]:
         """
         Specifies how to populate the body of the request with a JSON payload.
 
@@ -106,28 +125,22 @@ class Requester(ABC):
         """
 
     @abstractmethod
-    def request_kwargs(
+    def send_request(
         self,
-        stream_state: Mapping[str, Any],
-        stream_slice: Mapping[str, Any] = None,
-        next_page_token: Mapping[str, Any] = None,
-    ) -> Mapping[str, Any]:
+        stream_state: Optional[StreamState] = None,
+        stream_slice: Optional[StreamSlice] = None,
+        next_page_token: Optional[Mapping[str, Any]] = None,
+        path: Optional[str] = None,
+        request_headers: Optional[Mapping[str, Any]] = None,
+        request_params: Optional[Mapping[str, Any]] = None,
+        request_body_data: Optional[Union[Mapping[str, Any], str]] = None,
+        request_body_json: Optional[Mapping[str, Any]] = None,
+        log_formatter: Optional[Callable[[requests.Response], Any]] = None,
+    ) -> Optional[requests.Response]:
         """
-        Returns a mapping of keyword arguments to be used when creating the HTTP request.
-        Any option listed in https://docs.python-requests.org/en/latest/api/#requests.adapters.BaseAdapter.send for can be returned from
-        this method. Note that these options do not conflict with request-level options such as headers, request params, etc..
-        """
+        Sends a request and returns the response. Might return no response if the error handler chooses to ignore the response or throw an exception in case of an error.
+        If path is set, the path configured on the requester itself is ignored.
+        If header, params and body are set, they are merged with the ones configured on the requester itself.
 
-    @property
-    @abstractmethod
-    def cache_filename(self) -> str:
-        """
-        Return the name of cache file
-        """
-
-    @property
-    @abstractmethod
-    def use_cache(self) -> bool:
-        """
-        If True, all records will be cached.
+        If a log formatter is provided, it's used to log the performed request and response. If it's not provided, no logging is performed.
         """

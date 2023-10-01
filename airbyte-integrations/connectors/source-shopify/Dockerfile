@@ -1,6 +1,6 @@
 FROM python:3.9.11-alpine3.15 as base
 
-# build and load all requirements 
+# build and load all requirements
 FROM base as builder
 WORKDIR /airbyte/integration_code
 
@@ -8,10 +8,10 @@ WORKDIR /airbyte/integration_code
 RUN apk --no-cache upgrade && pip install --upgrade pip
 
 COPY setup.py ./
-# install necessary packages to a temporary folder 
+# install necessary packages to a temporary folder
 RUN pip install --prefix=/install .
 
-# build a clean environment  
+# build a clean environment
 FROM base
 WORKDIR /airbyte/integration_code
 
@@ -21,6 +21,9 @@ COPY --from=builder /install /usr/local
 # Bash is installed for more convenient debugging.
 RUN apk --no-cache add bash
 
+# Include socat binary in the connector image
+RUN apk --no-cache add socat
+
 # copy payload code only
 COPY main.py ./
 COPY source_shopify ./source_shopify
@@ -28,5 +31,5 @@ COPY source_shopify ./source_shopify
 ENV AIRBYTE_ENTRYPOINT "python /airbyte/integration_code/main.py"
 ENTRYPOINT ["python", "/airbyte/integration_code/main.py"]
 
-LABEL io.airbyte.version=0.1.37
+LABEL io.airbyte.version=1.1.1
 LABEL io.airbyte.name=airbyte/source-shopify

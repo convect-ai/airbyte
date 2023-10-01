@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.integrations.source.postgres;
@@ -9,16 +9,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableMap;
+import io.airbyte.cdk.db.Database;
+import io.airbyte.cdk.db.factory.DSLContextFactory;
+import io.airbyte.cdk.db.factory.DatabaseDriver;
+import io.airbyte.cdk.db.jdbc.DefaultJdbcDatabase;
+import io.airbyte.cdk.db.jdbc.JdbcDatabase;
+import io.airbyte.cdk.db.jdbc.JdbcUtils;
+import io.airbyte.cdk.testutils.PostgreSQLContainerHelper;
 import io.airbyte.commons.io.IOs;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.string.Strings;
-import io.airbyte.db.Database;
-import io.airbyte.db.factory.DSLContextFactory;
-import io.airbyte.db.factory.DatabaseDriver;
-import io.airbyte.db.jdbc.DefaultJdbcDatabase;
-import io.airbyte.db.jdbc.JdbcDatabase;
-import io.airbyte.integrations.base.AirbyteStreamNameNamespacePair;
-import io.airbyte.test.utils.PostgreSQLContainerHelper;
+import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Set;
@@ -33,13 +34,14 @@ import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.MountableFile;
 
 /**
- * This class tests the {@link PostgresCdcCatalogHelper#getPublicizedTables} method.
+ * This class tests the {@link PostgresCatalogHelper#getPublicizedTables} method.
  */
 class PostgresCdcGetPublicizedTablesTest {
 
   private static final String SCHEMA_NAME = "public";
   private static final String PUBLICATION = "publication_test_12";
   private static final String REPLICATION_SLOT = "replication_slot_test_12";
+  protected static final int INITIAL_WAITING_SECONDS = 30;
   private static PostgreSQLContainer<?> container;
   private JsonNode config;
 
@@ -82,25 +84,26 @@ class PostgresCdcGetPublicizedTablesTest {
 
   private JsonNode getConfig(final PostgreSQLContainer<?> psqlDb, final String dbName) {
     return Jsons.jsonNode(ImmutableMap.builder()
-        .put("host", psqlDb.getHost())
-        .put("port", psqlDb.getFirstMappedPort())
-        .put("database", dbName)
-        .put("schemas", List.of(SCHEMA_NAME))
-        .put("username", psqlDb.getUsername())
-        .put("password", psqlDb.getPassword())
-        .put("ssl", false)
+        .put(JdbcUtils.HOST_KEY, psqlDb.getHost())
+        .put(JdbcUtils.PORT_KEY, psqlDb.getFirstMappedPort())
+        .put(JdbcUtils.DATABASE_KEY, dbName)
+        .put(JdbcUtils.SCHEMAS_KEY, List.of(SCHEMA_NAME))
+        .put(JdbcUtils.USERNAME_KEY, psqlDb.getUsername())
+        .put(JdbcUtils.PASSWORD_KEY, psqlDb.getPassword())
+        .put(JdbcUtils.SSL_KEY, false)
+        .put("is_test", true)
         .build());
   }
 
   private static DSLContext getDslContext(final JsonNode config) {
     return DSLContextFactory.create(
-        config.get("username").asText(),
-        config.get("password").asText(),
+        config.get(JdbcUtils.USERNAME_KEY).asText(),
+        config.get(JdbcUtils.PASSWORD_KEY).asText(),
         DatabaseDriver.POSTGRESQL.getDriverClassName(),
         String.format(DatabaseDriver.POSTGRESQL.getUrlFormatString(),
-            config.get("host").asText(),
-            config.get("port").asInt(),
-            config.get("database").asText()),
+            config.get(JdbcUtils.HOST_KEY).asText(),
+            config.get(JdbcUtils.PORT_KEY).asInt(),
+            config.get(JdbcUtils.DATABASE_KEY).asText()),
         SQLDialect.POSTGRES);
   }
 
@@ -113,22 +116,23 @@ class PostgresCdcGetPublicizedTablesTest {
     try (final DSLContext dslContext = getDslContext(config)) {
       final JdbcDatabase database = new DefaultJdbcDatabase(dslContext.diagnosticsDataSource());
       // when source config does not exist
-      assertEquals(0, PostgresCdcCatalogHelper.getPublicizedTables(database).size());
+      assertEquals(0, PostgresCatalogHelper.getPublicizedTables(database).size());
 
       // when config is not cdc
       database.setSourceConfig(config);
-      assertEquals(0, PostgresCdcCatalogHelper.getPublicizedTables(database).size());
+      assertEquals(0, PostgresCatalogHelper.getPublicizedTables(database).size());
 
       // when config is cdc
       ((ObjectNode) config).set("replication_method", Jsons.jsonNode(ImmutableMap.of(
           "replication_slot", REPLICATION_SLOT,
+          "initial_waiting_seconds", INITIAL_WAITING_SECONDS,
           "publication", PUBLICATION)));
       database.setSourceConfig(config);
       final Set<AirbyteStreamNameNamespacePair> expectedTables = Set.of(
           new AirbyteStreamNameNamespacePair("table_1", SCHEMA_NAME),
           new AirbyteStreamNameNamespacePair("table_2", SCHEMA_NAME));
       // table_irrelevant is not included because it is not part of the publication
-      assertEquals(expectedTables, PostgresCdcCatalogHelper.getPublicizedTables(database));
+      assertEquals(expectedTables, PostgresCatalogHelper.getPublicizedTables(database));
     } catch (final SQLException e) {
       throw new RuntimeException(e);
     }

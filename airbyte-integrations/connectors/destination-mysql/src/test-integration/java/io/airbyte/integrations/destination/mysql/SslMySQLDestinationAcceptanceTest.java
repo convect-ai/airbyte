@@ -1,17 +1,23 @@
 /*
- * Copyright (c) 2022 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.integrations.destination.mysql;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableMap;
+import io.airbyte.cdk.db.Database;
+import io.airbyte.cdk.db.factory.DSLContextFactory;
+import io.airbyte.cdk.db.jdbc.JdbcUtils;
+import io.airbyte.cdk.integrations.base.JavaBaseConstants;
+import io.airbyte.cdk.integrations.destination.StandardNameTransformer;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.db.Database;
-import io.airbyte.db.factory.DSLContextFactory;
-import io.airbyte.integrations.base.JavaBaseConstants;
-import io.airbyte.integrations.destination.ExtendedNameTransformer;
+import io.airbyte.protocol.models.v0.AirbyteConnectionStatus;
 import java.sql.SQLException;
+import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.jooq.DSLContext;
@@ -23,29 +29,29 @@ public class SslMySQLDestinationAcceptanceTest extends MySQLDestinationAcceptanc
 
   private MySQLContainer<?> db;
   private DSLContext dslContext;
-  private final ExtendedNameTransformer namingResolver = new MySQLNameTransformer();
+  private final StandardNameTransformer namingResolver = new MySQLNameTransformer();
 
   @Override
   protected JsonNode getConfig() {
     return Jsons.jsonNode(ImmutableMap.builder()
-        .put("host", db.getHost())
-        .put("username", db.getUsername())
-        .put("password", db.getPassword())
-        .put("database", db.getDatabaseName())
-        .put("port", db.getFirstMappedPort())
-        .put("ssl", true)
+        .put(JdbcUtils.HOST_KEY, db.getHost())
+        .put(JdbcUtils.USERNAME_KEY, db.getUsername())
+        .put(JdbcUtils.PASSWORD_KEY, db.getPassword())
+        .put(JdbcUtils.DATABASE_KEY, db.getDatabaseName())
+        .put(JdbcUtils.PORT_KEY, db.getFirstMappedPort())
+        .put(JdbcUtils.SSL_KEY, true)
         .build());
   }
 
   @Override
   protected JsonNode getFailCheckConfig() {
     return Jsons.jsonNode(ImmutableMap.builder()
-        .put("host", db.getHost())
-        .put("username", db.getUsername())
-        .put("password", "wrong password")
-        .put("database", db.getDatabaseName())
-        .put("port", db.getFirstMappedPort())
-        .put("ssl", false)
+        .put(JdbcUtils.HOST_KEY, db.getHost())
+        .put(JdbcUtils.USERNAME_KEY, db.getUsername())
+        .put(JdbcUtils.PASSWORD_KEY, "wrong password")
+        .put(JdbcUtils.DATABASE_KEY, db.getDatabaseName())
+        .put(JdbcUtils.PORT_KEY, db.getFirstMappedPort())
+        .put(JdbcUtils.SSL_KEY, false)
         .build());
   }
 
@@ -79,7 +85,7 @@ public class SslMySQLDestinationAcceptanceTest extends MySQLDestinationAcceptanc
   }
 
   @Override
-  protected void setup(final TestDestinationEnv testEnv) {
+  protected void setup(final TestDestinationEnv testEnv, final HashSet<String> TEST_SCHEMAS) {
     db = new MySQLContainer<>("mysql:8.0");
     db.start();
 
@@ -143,6 +149,16 @@ public class SslMySQLDestinationAcceptanceTest extends MySQLDestinationAcceptanc
     } catch (final SQLException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  @Test
+  public void testUserHasNoPermissionToDataBase() {
+    executeQuery("create user '" + USERNAME_WITHOUT_PERMISSION + "'@'%' IDENTIFIED BY '" + PASSWORD_WITHOUT_PERMISSION + "';\n");
+    final JsonNode config = ((ObjectNode) getConfig()).put(JdbcUtils.USERNAME_KEY, USERNAME_WITHOUT_PERMISSION);
+    ((ObjectNode) config).put("password", PASSWORD_WITHOUT_PERMISSION);
+    final MySQLDestination destination = new MySQLDestination();
+    final AirbyteConnectionStatus status = destination.check(config);
+    assertEquals(AirbyteConnectionStatus.Status.FAILED, status.getStatus());
   }
 
 }

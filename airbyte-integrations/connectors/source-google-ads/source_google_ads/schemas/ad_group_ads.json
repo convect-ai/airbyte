@@ -2,6 +2,9 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "properties": {
+    "ad_group.id": {
+      "type": ["null", "integer"]
+    },
     "ad_group_ad.ad.added_by_google_ads": {
       "type": ["null", "boolean"]
     },
@@ -163,51 +166,6 @@
       "items": {
         "type": "string"
       }
-    },
-    "ad_group_ad.ad.gmail_ad.header_image": {
-      "type": ["null", "string"]
-    },
-    "ad_group_ad.ad.gmail_ad.marketing_image": {
-      "type": ["null", "string"]
-    },
-    "ad_group_ad.ad.gmail_ad.marketing_image_description": {
-      "type": ["null", "string"]
-    },
-    "ad_group_ad.ad.gmail_ad.marketing_image_display_call_to_action.text": {
-      "type": ["null", "string"]
-    },
-    "ad_group_ad.ad.gmail_ad.marketing_image_display_call_to_action.text_color": {
-      "type": ["null", "string"]
-    },
-    "ad_group_ad.ad.gmail_ad.marketing_image_display_call_to_action.url_collection_id": {
-      "type": ["null", "string"]
-    },
-    "ad_group_ad.ad.gmail_ad.marketing_image_headline": {
-      "type": ["null", "string"]
-    },
-    "ad_group_ad.ad.gmail_ad.product_images": {
-      "type": ["null", "array"],
-      "items": {
-        "type": "string"
-      }
-    },
-    "ad_group_ad.ad.gmail_ad.product_videos": {
-      "type": ["null", "array"],
-      "items": {
-        "type": "string"
-      }
-    },
-    "ad_group_ad.ad.gmail_ad.teaser.business_name": {
-      "type": ["null", "string"]
-    },
-    "ad_group_ad.ad.gmail_ad.teaser.description": {
-      "type": ["null", "string"]
-    },
-    "ad_group_ad.ad.gmail_ad.teaser.headline": {
-      "type": ["null", "string"]
-    },
-    "ad_group_ad.ad.gmail_ad.teaser.logo_image": {
-      "type": ["null", "string"]
     },
     "ad_group_ad.ad.hotel_ad": {
       "type": ["null", "string"]

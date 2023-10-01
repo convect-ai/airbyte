@@ -1,19 +1,19 @@
 /*
- * Copyright (c) 2022 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.integrations.source.oracle;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
+import io.airbyte.cdk.db.factory.DatabaseDriver;
+import io.airbyte.cdk.db.jdbc.JdbcUtils;
+import io.airbyte.cdk.db.jdbc.streaming.AdaptiveStreamingQueryConfig;
+import io.airbyte.cdk.integrations.base.IntegrationRunner;
+import io.airbyte.cdk.integrations.base.Source;
+import io.airbyte.cdk.integrations.source.jdbc.AbstractJdbcSource;
+import io.airbyte.cdk.integrations.source.jdbc.test.JdbcStressTest;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.db.factory.DatabaseDriver;
-import io.airbyte.db.jdbc.JdbcUtils;
-import io.airbyte.db.jdbc.streaming.AdaptiveStreamingQueryConfig;
-import io.airbyte.integrations.base.IntegrationRunner;
-import io.airbyte.integrations.base.Source;
-import io.airbyte.integrations.source.jdbc.AbstractJdbcSource;
-import io.airbyte.integrations.source.jdbc.test.JdbcStressTest;
 import java.sql.JDBCType;
 import java.util.Optional;
 import java.util.Set;
@@ -53,11 +53,11 @@ class OracleStressTest extends JdbcStressTest {
   @BeforeEach
   public void setup() throws Exception {
     config = Jsons.jsonNode(ImmutableMap.builder()
-        .put("host", ORACLE_DB.getHost())
-        .put("port", ORACLE_DB.getFirstMappedPort())
+        .put(JdbcUtils.HOST_KEY, ORACLE_DB.getHost())
+        .put(JdbcUtils.PORT_KEY, ORACLE_DB.getFirstMappedPort())
         .put("sid", ORACLE_DB.getSid())
-        .put("username", ORACLE_DB.getUsername())
-        .put("password", ORACLE_DB.getPassword())
+        .put(JdbcUtils.USERNAME_KEY, ORACLE_DB.getUsername())
+        .put(JdbcUtils.PASSWORD_KEY, ORACLE_DB.getPassword())
         .build());
     super.setup();
   }
@@ -100,14 +100,14 @@ class OracleStressTest extends JdbcStressTest {
     @Override
     public JsonNode toDatabaseConfig(final JsonNode config) {
       final ImmutableMap.Builder<Object, Object> configBuilder = ImmutableMap.builder()
-          .put("username", config.get("username").asText())
-          .put("jdbc_url", String.format("jdbc:oracle:thin:@//%s:%s/xe",
-              config.get("host").asText(),
-              config.get("port").asText(),
+          .put(JdbcUtils.USERNAME_KEY, config.get(JdbcUtils.USERNAME_KEY).asText())
+          .put(JdbcUtils.JDBC_URL_KEY, String.format("jdbc:oracle:thin:@//%s:%s/xe",
+              config.get(JdbcUtils.HOST_KEY).asText(),
+              config.get(JdbcUtils.PORT_KEY).asText(),
               config.get("sid").asText()));
 
-      if (config.has("password")) {
-        configBuilder.put("password", config.get("password").asText());
+      if (config.has(JdbcUtils.PASSWORD_KEY)) {
+        configBuilder.put(JdbcUtils.PASSWORD_KEY, config.get(JdbcUtils.PASSWORD_KEY).asText());
       }
 
       return Jsons.jsonNode(configBuilder.build());

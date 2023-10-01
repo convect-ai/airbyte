@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.integrations.io.airbyte.integration_tests.sources;
@@ -7,22 +7,23 @@ package io.airbyte.integrations.io.airbyte.integration_tests.sources;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import io.airbyte.cdk.db.factory.DataSourceFactory;
+import io.airbyte.cdk.db.jdbc.DefaultJdbcDatabase;
+import io.airbyte.cdk.db.jdbc.JdbcDatabase;
+import io.airbyte.cdk.db.jdbc.JdbcUtils;
+import io.airbyte.cdk.integrations.standardtest.source.SourceAcceptanceTest;
+import io.airbyte.cdk.integrations.standardtest.source.TestDestinationEnv;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.resources.MoreResources;
-import io.airbyte.db.factory.DataSourceFactory;
-import io.airbyte.db.jdbc.DefaultJdbcDatabase;
-import io.airbyte.db.jdbc.JdbcDatabase;
 import io.airbyte.integrations.source.db2.Db2Source;
-import io.airbyte.integrations.standardtest.source.SourceAcceptanceTest;
-import io.airbyte.integrations.standardtest.source.TestDestinationEnv;
-import io.airbyte.protocol.models.CatalogHelpers;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
-import io.airbyte.protocol.models.ConfiguredAirbyteStream;
-import io.airbyte.protocol.models.ConnectorSpecification;
-import io.airbyte.protocol.models.DestinationSyncMode;
 import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
-import io.airbyte.protocol.models.SyncMode;
+import io.airbyte.protocol.models.v0.CatalogHelpers;
+import io.airbyte.protocol.models.v0.ConfiguredAirbyteCatalog;
+import io.airbyte.protocol.models.v0.ConfiguredAirbyteStream;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.DestinationSyncMode;
+import io.airbyte.protocol.models.v0.SyncMode;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -103,12 +104,12 @@ public class Db2SourceCertificateAcceptanceTest extends SourceAcceptanceTest {
     }
 
     config = Jsons.jsonNode(ImmutableMap.builder()
-        .put("host", db.getHost())
-        .put("port", db.getFirstMappedPort())
+        .put(JdbcUtils.HOST_KEY, db.getHost())
+        .put(JdbcUtils.PORT_KEY, db.getFirstMappedPort())
         .put("db", db.getDatabaseName())
-        .put("username", db.getUsername())
-        .put("password", db.getPassword())
-        .put("encryption", Jsons.jsonNode(ImmutableMap.builder()
+        .put(JdbcUtils.USERNAME_KEY, db.getUsername())
+        .put(JdbcUtils.PASSWORD_KEY, db.getPassword())
+        .put(JdbcUtils.ENCRYPTION_KEY, Jsons.jsonNode(ImmutableMap.builder()
             .put("encryption_method", "encrypted_verify_certificate")
             .put("ssl_certificate", certificate)
             .put("key_store_password", TEST_KEY_STORE_PASS)
@@ -116,14 +117,14 @@ public class Db2SourceCertificateAcceptanceTest extends SourceAcceptanceTest {
         .build());
 
     final String jdbcUrl = String.format("jdbc:db2://%s:%s/%s",
-        config.get("host").asText(),
+        config.get(JdbcUtils.HOST_KEY).asText(),
         db.getMappedPort(50000),
         config.get("db").asText()) + ":sslConnection=true;sslTrustStoreLocation=" + KEY_STORE_FILE_PATH +
         ";sslTrustStorePassword=" + TEST_KEY_STORE_PASS + ";";
 
     dataSource = DataSourceFactory.create(
-        config.get("username").asText(),
-        config.get("password").asText(),
+        config.get(JdbcUtils.USERNAME_KEY).asText(),
+        config.get(JdbcUtils.PASSWORD_KEY).asText(),
         Db2Source.DRIVER_CLASS,
         jdbcUrl);
 

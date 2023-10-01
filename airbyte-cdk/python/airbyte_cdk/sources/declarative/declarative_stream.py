@@ -1,85 +1,85 @@
 #
-# Copyright (c) 2022 Airbyte, Inc., all rights reserved.
+# Copyright (c) 2023 Airbyte, Inc., all rights reserved.
 #
 
-
+from dataclasses import InitVar, dataclass, field
 from typing import Any, Iterable, List, Mapping, MutableMapping, Optional, Union
 
 from airbyte_cdk.models import SyncMode
+from airbyte_cdk.sources.declarative.interpolation import InterpolatedString
 from airbyte_cdk.sources.declarative.retrievers.retriever import Retriever
+from airbyte_cdk.sources.declarative.schema import DefaultSchemaLoader
 from airbyte_cdk.sources.declarative.schema.schema_loader import SchemaLoader
-from airbyte_cdk.sources.declarative.transformations import RecordTransformation
+from airbyte_cdk.sources.declarative.types import Config
 from airbyte_cdk.sources.streams.core import Stream
 
 
+@dataclass
 class DeclarativeStream(Stream):
     """
     DeclarativeStream is a Stream that delegates most of its logic to its schema_load and retriever
+
+    Attributes:
+        name (str): stream name
+        primary_key (Optional[Union[str, List[str], List[List[str]]]]): the primary key of the stream
+        schema_loader (SchemaLoader): The schema loader
+        retriever (Retriever): The retriever
+        config (Config): The user-provided configuration as specified by the source's spec
+        stream_cursor_field (Optional[Union[InterpolatedString, str]]): The cursor field
+        stream. Transformations are applied in the order in which they are defined.
     """
 
-    def __init__(
-        self,
-        name: str,
-        primary_key,
-        schema_loader: SchemaLoader,
-        retriever: Retriever,
-        cursor_field: Optional[List[str]] = None,
-        transformations: List[RecordTransformation] = None,
-        checkpoint_interval: Optional[int] = None,
-    ):
-        """
+    retriever: Retriever
+    config: Config
+    parameters: InitVar[Mapping[str, Any]]
+    name: str
+    primary_key: Optional[Union[str, List[str], List[List[str]]]]
+    schema_loader: Optional[SchemaLoader] = None
+    _name: str = field(init=False, repr=False, default="")
+    _primary_key: str = field(init=False, repr=False, default="")
+    stream_cursor_field: Optional[Union[InterpolatedString, str]] = None
 
-        :param name: stream name
-        :param primary_key: the primary key of the stream
-        :param schema_loader:
-        :param retriever:
-        :param cursor_field:
-        :param transformations: A list of transformations to be applied to each output record in the stream. Transformations are applied
-        in the order in which they are defined.
-        """
-        self._name = name
-        self._primary_key = primary_key
-        self._cursor_field = cursor_field or []
-        self._schema_loader = schema_loader
-        self._retriever = retriever
-        self._transformations = transformations or []
-        self._checkpoint_interval = checkpoint_interval
+    def __post_init__(self, parameters: Mapping[str, Any]) -> None:
+        self._stream_cursor_field = (
+            InterpolatedString.create(self.stream_cursor_field, parameters=parameters)
+            if isinstance(self.stream_cursor_field, str)
+            else self.stream_cursor_field
+        )
+        self._schema_loader = self.schema_loader if self.schema_loader else DefaultSchemaLoader(config=self.config, parameters=parameters)
 
-    @property
+    @property  # type: ignore
     def primary_key(self) -> Optional[Union[str, List[str], List[List[str]]]]:
         return self._primary_key
 
-    @property
+    @primary_key.setter
+    def primary_key(self, value: str) -> None:
+        if not isinstance(value, property):
+            self._primary_key = value
+
+    @property  # type: ignore
     def name(self) -> str:
         """
         :return: Stream name. By default this is the implementing class name, but it can be overridden as needed.
         """
         return self._name
 
-    @property
-    def state_checkpoint_interval(self) -> Optional[int]:
-        """
-        Decides how often to checkpoint state (i.e: emit a STATE message). E.g: if this returns a value of 100, then state is persisted after reading
-        100 records, then 200, 300, etc.. A good default value is 1000 although your mileage may vary depending on the underlying data source.
-
-        Checkpointing a stream avoids re-reading records in the case a sync is failed or cancelled.
-
-        return None if state should not be checkpointed e.g: because records returned from the underlying data source are not returned in
-        ascending order with respect to the cursor field. This can happen if the source does not support reading records in ascending order of
-        created_at date (or whatever the cursor is). In those cases, state must only be saved once the full stream has been read.
-        """
-        return self._checkpoint_interval
+    @name.setter
+    def name(self, value: str) -> None:
+        if not isinstance(value, property):
+            self._name = value
 
     @property
     def state(self) -> MutableMapping[str, Any]:
-        return self._retriever.state
+        return self.retriever.state  # type: ignore
 
     @state.setter
-    def state(self, value: MutableMapping[str, Any]):
+    def state(self, value: MutableMapping[str, Any]) -> None:
         """State setter, accept state serialized by state getter."""
-        self._retriever.state = value
+        self.retriever.state = value
 
-    def get_updated_state(self, current_stream_state: MutableMapping[str, Any], latest_record: Mapping[str, Any]):
+    def get_updated_state(
+        self, current_stream_state: MutableMapping[str, Any], latest_record: Mapping[str, Any]
+    ) -> MutableMapping[str, Any]:
         return self.state
 
     @property
@@ -88,45 +88,50 @@ class DeclarativeStream(Stream):
         Override to return the default cursor field used by this stream e.g: an API entity might always use created_at as the cursor field.
         :return: The name of the field used as a cursor. If the cursor is nested, return an array consisting of the path to the cursor.
         """
-        return self._cursor_field
+        cursor = self._stream_cursor_field.eval(self.config)
+        return cursor if cursor else []
 
     def read_records(
         self,
         sync_mode: SyncMode,
-        cursor_field: List[str] = None,
-        stream_slice: Mapping[str, Any] = None,
-        stream_state: Mapping[str, Any] = None,
+        cursor_field: Optional[List[str]] = None,
+        stream_slice: Optional[Mapping[str, Any]] = None,
+        stream_state: Optional[Mapping[str, Any]] = None,
     ) -> Iterable[Mapping[str, Any]]:
-        for record in self._retriever.read_records(sync_mode, cursor_field, stream_slice, stream_state):
-            yield self._apply_transformations(record)
+        """
+        :param: stream_state We knowingly avoid using stream_state as we want cursors to manage their own state.
+        """
+        yield from self.retriever.read_records(stream_slice)
 
-    def _apply_transformations(self, record: Mapping[str, Any]):
-        output_record = record
-        for transformation in self._transformations:
-            output_record = transformation.transform(record)
-
-        return output_record
-
-    def get_json_schema(self) -> Mapping[str, Any]:
+    def get_json_schema(self) -> Mapping[str, Any]:  # type: ignore
         """
         :return: A dict of the JSON schema representing this stream.
 
         The default implementation of this method looks for a JSONSchema file with the same name as this stream's "name" property.
         Override as needed.
         """
-        # TODO show an example of using pydantic to define the JSON schema, or reading an OpenAPI spec
         return self._schema_loader.get_json_schema()
 
     def stream_slices(
-        self, *, sync_mode: SyncMode, cursor_field: List[str] = None, stream_state: Mapping[str, Any] = None
+        self, *, sync_mode: SyncMode, cursor_field: Optional[List[str]] = None, stream_state: Optional[Mapping[str, Any]] = None
     ) -> Iterable[Optional[Mapping[str, Any]]]:
         """
         Override to define the slices for this stream. See the stream slicing section of the docs for more information.
 
         :param sync_mode:
         :param cursor_field:
-        :param stream_state:
+        :param stream_state: we knowingly avoid using stream_state as we want cursors to manage their own state
         :return:
         """
-        # this is not passing the cursor field because it is known at init time
-        return self._retriever.stream_slices(sync_mode=sync_mode, stream_state=stream_state)
+        return self.retriever.stream_slices()
+
+    @property
+    def state_checkpoint_interval(self) -> Optional[int]:
+        """
+        We explicitly disable checkpointing here. There are a couple reasons for that and not all are documented here but:
+        * In the case where records are not ordered, the granularity of what is ordered is the slice. Therefore, we will only update the
+            cursor value once at the end of every slice.
+        * Updating the state once every record would generate issues for data feed stop conditions or semi-incremental syncs where the
+            important state is the one at the beginning of the slice
+        """
+        return None

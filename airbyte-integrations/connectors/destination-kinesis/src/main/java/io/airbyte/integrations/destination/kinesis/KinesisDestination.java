@@ -1,17 +1,17 @@
 /*
- * Copyright (c) 2022 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.integrations.destination.kinesis;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import io.airbyte.integrations.BaseConnector;
-import io.airbyte.integrations.base.AirbyteMessageConsumer;
-import io.airbyte.integrations.base.Destination;
-import io.airbyte.integrations.base.IntegrationRunner;
-import io.airbyte.protocol.models.AirbyteConnectionStatus;
-import io.airbyte.protocol.models.AirbyteMessage;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
+import io.airbyte.cdk.integrations.BaseConnector;
+import io.airbyte.cdk.integrations.base.AirbyteMessageConsumer;
+import io.airbyte.cdk.integrations.base.Destination;
+import io.airbyte.cdk.integrations.base.IntegrationRunner;
+import io.airbyte.protocol.models.v0.AirbyteConnectionStatus;
+import io.airbyte.protocol.models.v0.AirbyteMessage;
+import io.airbyte.protocol.models.v0.ConfiguredAirbyteCatalog;
 import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,7 +34,7 @@ public class KinesisDestination extends BaseConnector implements Destination {
    * @return AirbyteConnectionStatus status of the connection result.
    */
   @Override
-  public AirbyteConnectionStatus check(JsonNode config) {
+  public AirbyteConnectionStatus check(final JsonNode config) {
     KinesisStream kinesisStream = null;
     var streamName = "test_stream";
     try {
@@ -69,10 +69,11 @@ public class KinesisDestination extends BaseConnector implements Destination {
    * @return KinesisMessageConsumer for consuming Airbyte messages and streaming them to Kinesis.
    */
   @Override
-  public AirbyteMessageConsumer getConsumer(JsonNode config,
-                                            ConfiguredAirbyteCatalog configuredCatalog,
-                                            Consumer<AirbyteMessage> outputRecordCollector) {
-    return new KinesisMessageConsumer(new KinesisConfig(config), configuredCatalog, outputRecordCollector);
+  public AirbyteMessageConsumer getConsumer(final JsonNode config,
+                                            final ConfiguredAirbyteCatalog configuredCatalog,
+                                            final Consumer<AirbyteMessage> outputRecordCollector) {
+    final KinesisStream kinesisStream = new KinesisStream(new KinesisConfig(config));
+    return new KinesisMessageConsumer(configuredCatalog, kinesisStream, outputRecordCollector);
   }
 
 }

@@ -4,8 +4,7 @@
   "properties": {
     "id": {
       "type": "integer",
-      "description": "The unique identifier for the option. This is only unique within the select field's set of options.",
-      "format": "int64"
+      "description": "The unique identifier for the option. This is only unique within the select field's set of options."
     },
     "value": {
       "type": "string",
@@ -13,7 +12,7 @@
     },
     "properties": {
       "type": "object",
-      "additionalProperties": {},
+      "additionalProperties": true,
       "description": "The properties of the object, as arbitrary key-value pairs. These properties can be searched using JQL, if the extractions (see [Issue Field Option Property Index](https://developer.atlassian.com/cloud/jira/platform/modules/issue-field-option-property-index/)) are defined in the descriptor for the issue field module."
     },
     "config": {
@@ -28,8 +27,7 @@
               "type": "array",
               "description": "DEPRECATED",
               "items": {
-                "type": "integer",
-                "format": "int64"
+                "type": "integer"
               }
             },
             "projects2": {
@@ -41,8 +39,7 @@
                 "properties": {
                   "id": {
                     "type": "integer",
-                    "description": "The ID of the project that the option's behavior applies to.",
-                    "format": "int64"
+                    "description": "The ID of the project that the option's behavior applies to."
                   },
                   "attributes": {
                     "uniqueItems": true,
@@ -85,6 +82,6 @@
       }
     }
   },
-  "additionalProperties": false,
+  "additionalProperties": true,
   "description": "Details of the options for a select list issue field."
 }

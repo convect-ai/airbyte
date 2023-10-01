@@ -115,7 +115,9 @@
       "type": ["null", "string"]
     },
     "update_time": {
-      "type": ["null", "string"]
+      "type": ["null", "string"],
+      "format": "date-time",
+      "airbyte_type": "timestamp_without_timezone"
     },
     "add_time": {
       "type": ["null", "string"]
@@ -193,6 +195,12 @@
       "type": ["null", "string"]
     },
     "cc_email": {
+      "type": ["null", "string"]
+    },
+    "picture_128_url": {
+      "type": ["null", "string"]
+    },
+    "delete_time": {
       "type": ["null", "string"]
     }
   }

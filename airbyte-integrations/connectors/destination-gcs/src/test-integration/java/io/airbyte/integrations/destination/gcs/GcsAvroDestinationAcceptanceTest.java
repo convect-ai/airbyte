@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.integrations.destination.gcs;
@@ -8,12 +8,13 @@ import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectReader;
+import io.airbyte.cdk.integrations.destination.s3.S3Format;
+import io.airbyte.cdk.integrations.destination.s3.avro.AvroConstants;
+import io.airbyte.cdk.integrations.destination.s3.avro.JsonFieldNameUpdater;
+import io.airbyte.cdk.integrations.destination.s3.util.AvroRecordHelper;
+import io.airbyte.cdk.integrations.standardtest.destination.ProtocolVersion;
+import io.airbyte.cdk.integrations.standardtest.destination.comparator.TestDataComparator;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.integrations.destination.s3.S3Format;
-import io.airbyte.integrations.destination.s3.avro.AvroConstants;
-import io.airbyte.integrations.destination.s3.avro.JsonFieldNameUpdater;
-import io.airbyte.integrations.destination.s3.util.AvroRecordHelper;
-import io.airbyte.integrations.standardtest.destination.comparator.TestDataComparator;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -28,7 +29,7 @@ import org.apache.avro.generic.GenericDatumReader;
 
 public class GcsAvroDestinationAcceptanceTest extends GcsAvroParquetDestinationAcceptanceTest {
 
-  protected GcsAvroDestinationAcceptanceTest() {
+  public GcsAvroDestinationAcceptanceTest() {
     super(S3Format.AVRO);
   }
 
@@ -79,7 +80,7 @@ public class GcsAvroDestinationAcceptanceTest extends GcsAvroParquetDestinationA
   protected Map<String, Set<Type>> retrieveDataTypesFromPersistedFiles(final String streamName, final String namespace) throws Exception {
 
     final List<S3ObjectSummary> objectSummaries = getAllSyncedObjects(streamName, namespace);
-    Map<String, Set<Type>> resultDataTypes = new HashMap<>();
+    final Map<String, Set<Type>> resultDataTypes = new HashMap<>();
 
     for (final S3ObjectSummary objectSummary : objectSummaries) {
       final S3Object object = s3Client.getObject(objectSummary.getBucketName(), objectSummary.getKey());
@@ -88,12 +89,17 @@ public class GcsAvroDestinationAcceptanceTest extends GcsAvroParquetDestinationA
           new GenericDatumReader<>())) {
         while (dataFileReader.hasNext()) {
           final GenericData.Record record = dataFileReader.next();
-          Map<String, Set<Type>> actualDataTypes = getTypes(record);
+          final Map<String, Set<Type>> actualDataTypes = getTypes(record);
           resultDataTypes.putAll(actualDataTypes);
         }
       }
     }
     return resultDataTypes;
+  }
+
+  @Override
+  public ProtocolVersion getProtocolVersion() {
+    return ProtocolVersion.V1;
   }
 
 }

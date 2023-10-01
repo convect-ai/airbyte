@@ -1,15 +1,13 @@
 #
-# Copyright (c) 2022 Airbyte, Inc., all rights reserved.
+# Copyright (c) 2023 Airbyte, Inc., all rights reserved.
 #
 
 
-from typing import Any, Mapping, Optional
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from .source_files_abstract.source import SourceFilesAbstract
 from .source_files_abstract.spec import SourceFilesAbstractSpec
-from .stream import IncrementalFileStreamS3
 
 
 class SourceS3Spec(SourceFilesAbstractSpec, BaseModel):
@@ -29,6 +27,7 @@ class SourceS3Spec(SourceFilesAbstractSpec, BaseModel):
             description="In order to access private Buckets stored on AWS S3, this connector requires credentials with the proper "
             "permissions. If accessing publicly available data, this field is not necessary.",
             airbyte_secret=True,
+            always_show=True,
             order=1,
         )
         aws_secret_access_key: Optional[str] = Field(
@@ -37,6 +36,7 @@ class SourceS3Spec(SourceFilesAbstractSpec, BaseModel):
             description="In order to access private Buckets stored on AWS S3, this connector requires credentials with the proper "
             "permissions. If accessing publicly available data, this field is not necessary.",
             airbyte_secret=True,
+            always_show=True,
             order=2,
         )
         path_prefix: str = Field(
@@ -48,30 +48,13 @@ class SourceS3Spec(SourceFilesAbstractSpec, BaseModel):
         )
 
         endpoint: str = Field("", description="Endpoint to an S3 compatible service. Leave empty to use AWS.", order=4)
-        use_ssl: bool = Field(
-            default=None,
-            title="Use TLS",
-            description="Whether the remote server is using a secure SSL/TLS connection. Only relevant if using an S3-compatible, "
-            "non-AWS server",
+        start_date: Optional[str] = Field(
+            title="Start Date",
+            description="UTC date and time in the format 2017-01-25T00:00:00Z. Any file modified before this date will not be replicated.",
+            examples=["2021-01-01T00:00:00Z"],
+            format="date-time",
+            pattern="^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
             order=5,
-        )
-        verify_ssl_cert: bool = Field(
-            default=None,
-            title="Verify TLS Certificates",
-            description="Set this to false to allow self signed certificates. Only relevant if using an S3-compatible, non-AWS server",
-            order=6,
         )
 
     provider: S3Provider
-
-
-class SourceS3(SourceFilesAbstract):
-    stream_class = IncrementalFileStreamS3
-    spec_class = SourceS3Spec
-    documentation_url = "https://docs.airbyte.io/integrations/sources/s3"
-
-    def read_config(self, config_path: str) -> Mapping[str, Any]:
-        config: Mapping[str, Any] = super().read_config(config_path)
-        if config.get("format", {}).get("delimiter") == r"\t":
-            config["format"]["delimiter"] = "\t"
-        return config

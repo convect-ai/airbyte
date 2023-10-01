@@ -144,16 +144,25 @@
       "type": ["null", "number"]
     },
     "ad_group_ad.ad.final_mobile_urls": {
-      "type": ["null", "array"]
+      "type": ["null", "array"],
+      "items": {
+        "type": "string"
+      }
     },
     "ad_group_ad.ad.final_urls": {
-      "type": ["null", "array"]
+      "type": ["null", "array"],
+      "items": {
+        "type": "string"
+      }
     },
     "ad_group_ad.ad.tracking_url_template": {
       "type": ["null", "string"]
     },
     "ad_group_ad.ad.url_custom_parameters": {
-      "type": ["null", "array"]
+      "type": ["null", "array"],
+      "items": {
+        "type": "string"
+      }
     },
     "metrics.cross_device_conversions": {
       "type": ["null", "number"]
@@ -169,7 +178,7 @@
     },
     "segments.date": {
       "type": ["null", "string"],
-      "format": "datetime"
+      "format": "date"
     },
     "segments.day_of_week": {
       "type": ["null", "string"]
@@ -222,15 +231,6 @@
     "ad_group_ad.ad.legacy_responsive_display_ad.format_setting": {
       "type": ["null", "string"]
     },
-    "ad_group_ad.ad.gmail_ad.header_image": {
-      "type": ["null", "string"]
-    },
-    "ad_group_ad.ad.gmail_ad.teaser.logo_image": {
-      "type": ["null", "string"]
-    },
-    "ad_group_ad.ad.gmail_ad.marketing_image": {
-      "type": ["null", "string"]
-    },
     "metrics.gmail_forwards": {
       "type": ["null", "integer"]
     },
@@ -239,15 +239,6 @@
     },
     "metrics.gmail_secondary_clicks": {
       "type": ["null", "integer"]
-    },
-    "ad_group_ad.ad.gmail_ad.teaser.business_name": {
-      "type": ["null", "string"]
-    },
-    "ad_group_ad.ad.gmail_ad.teaser.description": {
-      "type": ["null", "string"]
-    },
-    "ad_group_ad.ad.gmail_ad.teaser.headline": {
-      "type": ["null", "string"]
     },
     "ad_group_ad.ad.text_ad.headline": {
       "type": ["null", "string"]
@@ -283,7 +274,10 @@
       "type": ["null", "number"]
     },
     "metrics.interaction_event_types": {
-      "type": ["null", "array"]
+      "type": ["null", "array"],
+      "items": {
+        "type": "string"
+      }
     },
     "metrics.interactions": {
       "type": ["null", "integer"]
@@ -292,18 +286,6 @@
       "type": ["null", "string"]
     },
     "ad_group_ad.ad.legacy_responsive_display_ad.main_color": {
-      "type": ["null", "string"]
-    },
-    "ad_group_ad.ad.gmail_ad.marketing_image_display_call_to_action.text": {
-      "type": ["null", "string"]
-    },
-    "ad_group_ad.ad.gmail_ad.marketing_image_display_call_to_action.text_color": {
-      "type": ["null", "string"]
-    },
-    "ad_group_ad.ad.gmail_ad.marketing_image_headline": {
-      "type": ["null", "string"]
-    },
-    "ad_group_ad.ad.gmail_ad.marketing_image_description": {
       "type": ["null", "string"]
     },
     "segments.month": {
@@ -322,7 +304,10 @@
       "type": ["null", "string"]
     },
     "ad_group_ad.ad.responsive_display_ad.descriptions": {
-      "type": ["null", "array"]
+      "type": ["null", "array"],
+      "items": {
+        "type": "string"
+      }
     },
     "ad_group_ad.ad.responsive_display_ad.price_prefix": {
       "type": ["null", "string"]
@@ -334,13 +319,22 @@
       "type": ["null", "string"]
     },
     "ad_group_ad.ad.responsive_display_ad.headlines": {
-      "type": ["null", "array"]
+      "type": ["null", "array"],
+      "items": {
+        "type": "string"
+      }
     },
     "ad_group_ad.ad.responsive_display_ad.logo_images": {
-      "type": ["null", "array"]
+      "type": ["null", "array"],
+      "items": {
+        "type": "string"
+      }
     },
     "ad_group_ad.ad.responsive_display_ad.square_logo_images": {
-      "type": ["null", "array"]
+      "type": ["null", "array"],
+      "items": {
+        "type": "string"
+      }
     },
     "ad_group_ad.ad.responsive_display_ad.long_headline": {
       "type": ["null", "string"]
@@ -349,13 +343,22 @@
       "type": ["null", "string"]
     },
     "ad_group_ad.ad.responsive_display_ad.marketing_images": {
-      "type": ["null", "array"]
+      "type": ["null", "array"],
+      "items": {
+        "type": "string"
+      }
     },
     "ad_group_ad.ad.responsive_display_ad.square_marketing_images": {
-      "type": ["null", "array"]
+      "type": ["null", "array"],
+      "items": {
+        "type": "string"
+      }
     },
     "ad_group_ad.ad.responsive_display_ad.youtube_videos": {
-      "type": ["null", "array"]
+      "type": ["null", "array"],
+      "items": {
+        "type": "string"
+      }
     },
     "ad_group_ad.ad.expanded_text_ad.path1": {
       "type": ["null", "string"]
@@ -376,10 +379,16 @@
       "type": ["null", "string"]
     },
     "ad_group_ad.ad.responsive_search_ad.descriptions": {
-      "type": ["null", "array"]
+      "type": ["null", "array"],
+      "items": {
+        "type": "string"
+      }
     },
     "ad_group_ad.ad.responsive_search_ad.headlines": {
-      "type": ["null", "array"]
+      "type": ["null", "array"],
+      "items": {
+        "type": "string"
+      }
     },
     "ad_group_ad.ad.responsive_search_ad.path1": {
       "type": ["null", "string"]
@@ -400,22 +409,37 @@
       "type": ["null", "number"]
     },
     "ad_group_ad.ad.app_ad.descriptions": {
-      "type": ["null", "array"]
+      "type": ["null", "array"],
+      "items": {
+        "type": "string"
+      }
     },
     "ad_group_ad.ad.app_ad.headlines": {
-      "type": ["null", "array"]
+      "type": ["null", "array"],
+      "items": {
+        "type": "string"
+      }
     },
     "ad_group_ad.ad.app_ad.html5_media_bundles": {
-      "type": ["null", "array"]
+      "type": ["null", "array"],
+      "items": {
+        "type": "string"
+      }
     },
     "ad_group_ad.ad.app_ad.images": {
-      "type": ["null", "array"]
+      "type": ["null", "array"],
+      "items": {
+        "type": "string"
+      }
     },
     "ad_group_ad.ad.app_ad.mandatory_ad_text": {
       "type": ["null", "string"]
     },
     "ad_group_ad.ad.app_ad.youtube_videos": {
-      "type": ["null", "array"]
+      "type": ["null", "array"],
+      "items": {
+        "type": "string"
+      }
     },
     "metrics.value_per_all_conversions": {
       "type": ["null", "number"]

@@ -1,21 +1,18 @@
 #
-# Copyright (c) 2022 Airbyte, Inc., all rights reserved.
+# Copyright (c) 2023 Airbyte, Inc., all rights reserved.
 #
 
-import copy
 import logging
-from typing import Any, Iterator, List, Mapping, MutableMapping, Optional, Tuple
+from http import HTTPStatus
+from itertools import chain
+from typing import Any, List, Mapping, Optional, Tuple
 
 import requests
 from airbyte_cdk.logger import AirbyteLogger
-from airbyte_cdk.models import AirbyteMessage, ConfiguredAirbyteCatalog
 from airbyte_cdk.sources import AbstractSource
-from airbyte_cdk.sources.deprecated.base_source import ConfiguredAirbyteStream
 from airbyte_cdk.sources.streams import Stream
-from airbyte_cdk.sources.utils.schema_helpers import InternalConfig, split_config
-from airbyte_cdk.utils.event_timing import create_timer
-from airbyte_cdk.utils.traced_exception import AirbyteTracedException
 from requests import HTTPError
+from source_hubspot.errors import HubspotInvalidAuth
 from source_hubspot.streams import (
     API,
     Campaigns,
@@ -23,24 +20,28 @@ from source_hubspot.streams import (
     ContactLists,
     Contacts,
     ContactsListMemberships,
+    ContactsMergedAudit,
+    CustomObject,
     DealPipelines,
     Deals,
+    DealsArchived,
     EmailEvents,
+    EmailSubscriptions,
     Engagements,
     EngagementsCalls,
     EngagementsEmails,
     EngagementsMeetings,
     EngagementsNotes,
     EngagementsTasks,
-    FeedbackSubmissions,
     Forms,
     FormSubmissions,
+    Goals,
     LineItems,
     MarketingEmails,
     Owners,
+    OwnersArchived,
     Products,
     PropertyHistory,
-    Quotes,
     SubscriptionChanges,
     TicketPipelines,
     Tickets,
@@ -62,6 +63,12 @@ class SourceHubspot(AbstractSource):
         except HTTPError as error:
             alive = False
             error_msg = repr(error)
+            if error.response.status_code == HTTPStatus.BAD_REQUEST:
+                response_json = error.response.json()
+                error_msg = f"400 Bad Request: {response_json['message']}, please check if provided credentials are valid."
+        except HubspotInvalidAuth as e:
+            alive = False
+            error_msg = repr(e)
         return alive, error_msg
 
     def get_granted_scopes(self, authenticator):
@@ -82,14 +89,10 @@ class SourceHubspot(AbstractSource):
         return API(credentials=credentials)
 
     def get_common_params(self, config) -> Mapping[str, Any]:
-        start_date = config.get("start_date")
+        start_date = config["start_date"]
         credentials = config["credentials"]
         api = self.get_api(config=config)
-        common_params = dict(api=api, start_date=start_date, credentials=credentials)
-
-        if credentials.get("credentials_title") == "OAuth Credentials":
-            common_params["authenticator"] = api.get_authenticator()
-        return common_params
+        return dict(api=api, start_date=start_date, credentials=credentials)
 
     def streams(self, config: Mapping[str, Any]) -> List[Stream]:
         credentials = config.get("credentials", {})
@@ -100,21 +103,25 @@ class SourceHubspot(AbstractSource):
             ContactLists(**common_params),
             Contacts(**common_params),
             ContactsListMemberships(**common_params),
+            ContactsMergedAudit(**common_params),
             DealPipelines(**common_params),
             Deals(**common_params),
+            DealsArchived(**common_params),
             EmailEvents(**common_params),
+            EmailSubscriptions(**common_params),
             Engagements(**common_params),
             EngagementsCalls(**common_params),
             EngagementsEmails(**common_params),
             EngagementsMeetings(**common_params),
             EngagementsNotes(**common_params),
             EngagementsTasks(**common_params),
-            FeedbackSubmissions(**common_params),
             Forms(**common_params),
             FormSubmissions(**common_params),
+            Goals(**common_params),
             LineItems(**common_params),
             MarketingEmails(**common_params),
             Owners(**common_params),
+            OwnersArchived(**common_params),
             Products(**common_params),
             PropertyHistory(**common_params),
             SubscriptionChanges(**common_params),
@@ -123,88 +130,35 @@ class SourceHubspot(AbstractSource):
             Workflows(**common_params),
         ]
 
-        credentials_title = credentials.get("credentials_title")
-        if credentials_title == "API Key Credentials":
-            streams.append(Quotes(**common_params))
-
         api = API(credentials=credentials)
         if api.is_oauth2():
-            authenticator = API(credentials=credentials).get_authenticator()
+            authenticator = api.get_authenticator()
             granted_scopes = self.get_granted_scopes(authenticator)
             self.logger.info(f"The following scopes were granted: {granted_scopes}")
 
             available_streams = [stream for stream in streams if stream.scope_is_granted(granted_scopes)]
             unavailable_streams = [stream for stream in streams if not stream.scope_is_granted(granted_scopes)]
             self.logger.info(f"The following streams are unavailable: {[s.name for s in unavailable_streams]}")
+            partially_available_streams = [stream for stream in streams if not stream.properties_scope_is_granted()]
+            required_scoped = set(chain(*[x.properties_scopes for x in partially_available_streams]))
+            self.logger.info(
+                f"The following streams are partially available: {[s.name for s in partially_available_streams]}, "
+                f"add the following scopes to download all available data: {required_scoped}"
+            )
         else:
             self.logger.info("No scopes to grant when authenticating with API key.")
             available_streams = streams
 
+        available_streams.extend(self.get_custom_object_streams(api=api, common_params=common_params))
+
         return available_streams
 
-    def read(
-        self, logger: logging.Logger, config: Mapping[str, Any], catalog: ConfiguredAirbyteCatalog, state: MutableMapping[str, Any] = None
-    ) -> Iterator[AirbyteMessage]:
-        """
-        This method is overridden to check whether the stream `quotes` exists in the source, if not skip reading that stream.
-        """
-        connector_state = copy.deepcopy(state or {})
-        logger.info(f"Starting syncing {self.name}")
-        config, internal_config = split_config(config)
-        # TODO assert all streams exist in the connector
-        # get the streams once in case the connector needs to make any queries to generate them
-        stream_instances = {s.name: s for s in self.streams(config)}
-        self._stream_to_instance_map = stream_instances
-        with create_timer(self.name) as timer:
-            for configured_stream in catalog.streams:
-                stream_instance = stream_instances.get(configured_stream.stream.name)
-                if not stream_instance and configured_stream.stream.name == "quotes":
-                    logger.warning("Stream `quotes` does not exist in the source. Skip reading `quotes` stream.")
-                    continue
-                if not stream_instance:
-                    raise KeyError(
-                        f"The requested stream {configured_stream.stream.name} was not found in the source. Available streams: {stream_instances.keys()}"
-                    )
-
-                try:
-                    yield from self._read_stream(
-                        logger=logger,
-                        stream_instance=stream_instance,
-                        configured_stream=configured_stream,
-                        connector_state=connector_state,
-                        internal_config=internal_config,
-                    )
-                except Exception as e:
-                    logger.exception(f"Encountered an exception while reading stream {configured_stream.stream.name}")
-                    display_message = stream_instance.get_error_display_message(e)
-                    if display_message:
-                        raise AirbyteTracedException.from_exception(e, message=display_message) from e
-                    raise e
-                finally:
-                    logger.info(f"Finished syncing {self.name}")
-                    logger.info(timer.report())
-
-        logger.info(f"Finished syncing {self.name}")
-
-    def _read_incremental(
-        self,
-        logger: logging.Logger,
-        stream_instance: Stream,
-        configured_stream: ConfiguredAirbyteStream,
-        connector_state: MutableMapping[str, Any],
-        internal_config: InternalConfig,
-    ) -> Iterator[AirbyteMessage]:
-        """
-        This method is overridden to checkpoint the latest actual state,
-        because stream state is refreshed after reading each batch of records (if need_chunk is True),
-        or reading all records in the stream.
-        """
-        yield from super()._read_incremental(
-            logger=logger,
-            stream_instance=stream_instance,
-            configured_stream=configured_stream,
-            connector_state=connector_state,
-            internal_config=internal_config,
-        )
-        stream_state = stream_instance.get_updated_state(current_stream_state={}, latest_record={})
-        yield self._checkpoint_state(stream_instance, stream_state, connector_state)
+    def get_custom_object_streams(self, api: API, common_params: Mapping[str, Any]):
+        for entity, fully_qualified_name, schema, custom_properties in api.get_custom_objects_metadata():
+            yield CustomObject(
+                entity=entity,
+                schema=schema,
+                fully_qualified_name=fully_qualified_name,
+                custom_properties=custom_properties,
+                **common_params,
+            )

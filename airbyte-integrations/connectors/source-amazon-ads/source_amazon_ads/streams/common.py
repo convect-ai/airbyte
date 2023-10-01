@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022 Airbyte, Inc., all rights reserved.
+# Copyright (c) 2023 Airbyte, Inc., all rights reserved.
 #
 
 from abc import ABC, abstractmethod
@@ -24,6 +24,7 @@ airbyte_cdk.sources.streams.core.Stream
     ├── airbyte_cdk.sources.streams.http.HttpStream
     │   └── AmazonAdsStream
     │       ├── Profiles
+    │       ├── Portfolios
     │       └── SubProfilesStream
     │           ├── SponsoredDisplayAdGroups
     │           ├── SponsoredDisplayCampaigns
@@ -40,6 +41,7 @@ airbyte_cdk.sources.streams.core.Stream
     │           └── SponsoredBrandsKeywords
     └── ReportStream
         ├── SponsoredBrandsReportStream
+        ├── SponsoredBrandsV3ReportStream
         ├── SponsoredDisplayReportStream
         └── SponsoredProductsReportStream
 
@@ -48,11 +50,11 @@ for storing list of profiles that later be used by all the streams to get
 profile id. Also it stores pydantic model and API url for requests.
 
 AmazonAdsStream is Http based class, it used for making request that could be
-accomlished by single http call (any but report streams).
+accomplished by single http call (any but report streams).
 
 SubProfilesStream is subclass for http streams to perform read_records from
 basic class for EACH profile from self._profiles list. Also provides support
-for Amazon Ads API pagintaion. This is base class for all the sync http streams
+for Amazon Ads API pagination. This is base class for all the sync http streams
 that used by source.
 
 ReportStream (It implemented on report_stream.py file) is subclass for async
@@ -97,6 +99,8 @@ class AmazonAdsStream(HttpStream, BasicAmazonAdsStream):
     Class for getting data from streams that based on single http request.
     """
 
+    data_field = ""
+
     def __init__(self, config: Mapping[str, Any], *args, profiles: List[Profile] = None, **kwargs):
         # Each AmazonAdsStream instance are dependant on list of profiles.
         BasicAmazonAdsStream.__init__(self, config, profiles=profiles)
@@ -121,7 +125,10 @@ class AmazonAdsStream(HttpStream, BasicAmazonAdsStream):
         :return an object representing single record in the response
         """
         if response.status_code == HTTPStatus.OK:
-            yield from response.json()
+            if self.data_field:
+                yield from response.json().get(self.data_field, [])
+            else:
+                yield from response.json()
             return
 
         """
@@ -151,7 +158,7 @@ class AmazonAdsStream(HttpStream, BasicAmazonAdsStream):
             response.raise_for_status()
             raise Exception(response.text)
 
-        self.logger.warn(
+        self.logger.warning(
             f"Unexpected error {resp.code} when processing request {response.request.url} for "
             f"{response.request.headers['Amazon-Advertising-API-Scope']} profile: {resp.details}"
         )

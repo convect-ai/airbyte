@@ -1,15 +1,17 @@
 #
-# Copyright (c) 2022 Airbyte, Inc., all rights reserved.
+# Copyright (c) 2023 Airbyte, Inc., all rights reserved.
 #
 
-from typing import Any, List, Mapping
+from dataclasses import InitVar, dataclass
+from typing import Any, List, Mapping, Optional
 
 import dpath.exceptions
 import dpath.util
 from airbyte_cdk.sources.declarative.transformations import RecordTransformation
-from airbyte_cdk.sources.declarative.types import FieldPointer
+from airbyte_cdk.sources.declarative.types import Config, FieldPointer, StreamSlice, StreamState
 
 
+@dataclass
 class RemoveFields(RecordTransformation):
     """
     A transformation which removes fields from a record. The fields removed are designated using FieldPointers.
@@ -31,22 +33,27 @@ class RemoveFields(RecordTransformation):
                     - ["path", "to", "field1"]
                     - ["path2"]
     ```
+
+    Attributes:
+        field_pointers (List[FieldPointer]): pointers to the fields that should be removed
     """
 
-    def __init__(self, field_pointers: List[FieldPointer]):
-        """
-        :param field_pointers: pointers to the fields that should be removed
-        """
-        self._field_pointers = field_pointers
+    field_pointers: List[FieldPointer]
+    parameters: InitVar[Mapping[str, Any]]
 
-    def transform(self, record: Mapping[str, Any], **kwargs) -> Mapping[str, Any]:
+    def transform(
+        self,
+        record: Mapping[str, Any],
+        config: Optional[Config] = None,
+        stream_state: Optional[StreamState] = None,
+        stream_slice: Optional[StreamSlice] = None,
+    ) -> Mapping[str, Any]:
         """
         :param record: The record to be transformed
         :return: the input record with the requested fields removed
         """
-        for pointer in self._field_pointers:
+        for pointer in self.field_pointers:
             # the dpath library by default doesn't delete fields from arrays
-
             try:
                 dpath.util.delete(record, pointer)
             except dpath.exceptions.PathNotFound:

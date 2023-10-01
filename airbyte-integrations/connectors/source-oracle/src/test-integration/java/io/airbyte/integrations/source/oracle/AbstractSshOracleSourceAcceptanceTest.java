@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.integrations.source.oracle;
@@ -7,23 +7,23 @@ package io.airbyte.integrations.source.oracle;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import io.airbyte.cdk.db.factory.DataSourceFactory;
+import io.airbyte.cdk.db.factory.DatabaseDriver;
+import io.airbyte.cdk.db.jdbc.DefaultJdbcDatabase;
+import io.airbyte.cdk.db.jdbc.JdbcDatabase;
+import io.airbyte.cdk.integrations.base.ssh.SshBastionContainer;
+import io.airbyte.cdk.integrations.base.ssh.SshHelpers;
+import io.airbyte.cdk.integrations.base.ssh.SshTunnel;
+import io.airbyte.cdk.integrations.standardtest.source.SourceAcceptanceTest;
+import io.airbyte.cdk.integrations.standardtest.source.TestDestinationEnv;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.db.factory.DataSourceFactory;
-import io.airbyte.db.factory.DatabaseDriver;
-import io.airbyte.db.jdbc.DefaultJdbcDatabase;
-import io.airbyte.db.jdbc.JdbcDatabase;
-import io.airbyte.integrations.base.ssh.SshBastionContainer;
-import io.airbyte.integrations.base.ssh.SshHelpers;
-import io.airbyte.integrations.base.ssh.SshTunnel;
-import io.airbyte.integrations.standardtest.source.SourceAcceptanceTest;
-import io.airbyte.integrations.standardtest.source.TestDestinationEnv;
-import io.airbyte.protocol.models.CatalogHelpers;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
-import io.airbyte.protocol.models.ConfiguredAirbyteStream;
-import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
-import io.airbyte.protocol.models.SyncMode;
+import io.airbyte.protocol.models.v0.CatalogHelpers;
+import io.airbyte.protocol.models.v0.ConfiguredAirbyteCatalog;
+import io.airbyte.protocol.models.v0.ConfiguredAirbyteStream;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.SyncMode;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
@@ -36,7 +36,7 @@ public abstract class AbstractSshOracleSourceAcceptanceTest extends SourceAccept
   private static final String STREAM_NAME2 = "JDBC_SPACE.STARSHIPS";
   private static final Network network = Network.newNetwork();
   private final SshBastionContainer sshBastionContainer = new SshBastionContainer();
-  private OracleContainer db;
+  private AirbyteOracleTestContainer db;
 
   private JsonNode config;
 
@@ -45,7 +45,7 @@ public abstract class AbstractSshOracleSourceAcceptanceTest extends SourceAccept
   @Override
   protected void setupEnvironment(final TestDestinationEnv environment) throws Exception {
     startTestContainers();
-    config = sshBastionContainer.getTunnelConfig(getTunnelMethod(), getBasicOracleDbConfigBuider(db));
+    config = sshBastionContainer.getTunnelConfig(getTunnelMethod(), getBasicOracleDbConfigBuider(db), false);
     populateDatabaseTestData();
   }
 
@@ -57,7 +57,7 @@ public abstract class AbstractSshOracleSourceAcceptanceTest extends SourceAccept
         String.format(DatabaseDriver.ORACLE.getUrlFormatString(),
             config.get("host").asText(),
             config.get("port").asInt(),
-            config.get("sid").asText()));
+            config.get("connection_data").get("service_name").asText()));
 
     try {
       final JdbcDatabase database = new DefaultJdbcDatabase(dataSource);
@@ -90,7 +90,7 @@ public abstract class AbstractSshOracleSourceAcceptanceTest extends SourceAccept
   }
 
   private void initAndStartJdbcContainer() {
-    db = new OracleContainer()
+    db = new AirbyteOracleTestContainer()
         .withUsername("test")
         .withPassword("oracle")
         .usingSid()
@@ -108,7 +108,7 @@ public abstract class AbstractSshOracleSourceAcceptanceTest extends SourceAccept
     return SshHelpers.getSpecAndInjectSsh();
   }
 
-  public ImmutableMap.Builder<Object, Object> getBasicOracleDbConfigBuider(final OracleContainer db) {
+  public ImmutableMap.Builder<Object, Object> getBasicOracleDbConfigBuider(final AirbyteOracleTestContainer db) {
     return ImmutableMap.builder()
         .put("host", Objects.requireNonNull(db.getContainerInfo().getNetworkSettings()
             .getNetworks()
@@ -117,7 +117,9 @@ public abstract class AbstractSshOracleSourceAcceptanceTest extends SourceAccept
         .put("username", db.getUsername())
         .put("password", db.getPassword())
         .put("port", db.getExposedPorts().get(0))
-        .put("sid", db.getSid())
+        .put("connection_data", ImmutableMap.builder()
+            .put("service_name", db.getSid())
+            .put("connection_type", "service_name").build())
         .put("schemas", List.of("JDBC_SPACE"))
         .put("encryption", Jsons.jsonNode(ImmutableMap.builder()
             .put("encryption_method", "unencrypted")

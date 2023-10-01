@@ -1,17 +1,18 @@
 /*
- * Copyright (c) 2022 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.integrations.source.mysql;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
+import io.airbyte.cdk.db.Database;
+import io.airbyte.cdk.db.factory.DSLContextFactory;
+import io.airbyte.cdk.db.factory.DatabaseDriver;
+import io.airbyte.cdk.db.jdbc.JdbcUtils;
+import io.airbyte.cdk.integrations.standardtest.source.performancetest.AbstractSourcePerformanceTest;
 import io.airbyte.commons.io.IOs;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.db.Database;
-import io.airbyte.db.factory.DSLContextFactory;
-import io.airbyte.db.factory.DatabaseDriver;
-import io.airbyte.integrations.standardtest.source.performancetest.AbstractSourcePerformanceTest;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -33,22 +34,22 @@ public class MySqlRdsSourcePerformanceSecretTest extends AbstractSourcePerforman
     final JsonNode plainConfig = Jsons.deserialize(IOs.readFile(Path.of(PERFORMANCE_SECRET_CREDS)));
 
     config = Jsons.jsonNode(ImmutableMap.builder()
-        .put("host", plainConfig.get("host"))
-        .put("port", plainConfig.get("port"))
-        .put("database", dbName)
-        .put("username", plainConfig.get("username"))
-        .put("password", plainConfig.get("password"))
+        .put(JdbcUtils.HOST_KEY, plainConfig.get(JdbcUtils.HOST_KEY))
+        .put(JdbcUtils.PORT_KEY, plainConfig.get(JdbcUtils.PORT_KEY))
+        .put(JdbcUtils.DATABASE_KEY, dbName)
+        .put(JdbcUtils.USERNAME_KEY, plainConfig.get(JdbcUtils.USERNAME_KEY))
+        .put(JdbcUtils.PASSWORD_KEY, plainConfig.get(JdbcUtils.PASSWORD_KEY))
         .put("replication_method", plainConfig.get("replication_method"))
         .build());
 
     try (final DSLContext dslContext = DSLContextFactory.create(
-        config.get("username").asText(),
-        config.get("password").asText(),
+        config.get(JdbcUtils.USERNAME_KEY).asText(),
+        config.get(JdbcUtils.PASSWORD_KEY).asText(),
         DatabaseDriver.MYSQL.getDriverClassName(),
         String.format(DatabaseDriver.MYSQL.getUrlFormatString(),
-            config.get("host").asText(),
-            config.get("port").asInt(),
-            config.get("database").asText()),
+            config.get(JdbcUtils.HOST_KEY).asText(),
+            config.get(JdbcUtils.PORT_KEY).asInt(),
+            config.get(JdbcUtils.DATABASE_KEY).asText()),
         SQLDialect.MYSQL,
         Map.of("zeroDateTimeBehavior", "convertToNull"))) {
 

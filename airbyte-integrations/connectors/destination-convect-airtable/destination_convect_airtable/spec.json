@@ -1,0 +1,45 @@
+{
+  "documentationUrl": "https://docs.airbyte.io/integrations/destinations/convect-airtable",
+  "supported_destination_sync_modes": [
+    "append"
+  ],
+  "supportsIncremental": true,
+  "supportsDBT": false,
+  "supportsNormalization": false,
+  "connectionSpecification": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Destination Convect Airtable",
+    "type": "object",
+    "required": ["api_key", "base_id"],
+    "additionalProperties": false,
+    "properties": {
+      "api_key": {
+        "type": "string",
+        "description": "The API Key for the Airtable account. See the <a href=\"https://support.airtable.com/hc/en-us/articles/219046777-How-do-I-get-my-API-key-\">Support Guide</a> for more information on how to obtain this key.",
+        "title": "API Key",
+        "airbyte_secret": true,
+        "examples": ["key1234567890"],
+	"order": 1
+      },
+      "base_id": {
+        "type": "string",
+        "description": "The Base ID to integrate the data from. You can find the Base ID following the link <a href=\"https://airtable.com/api\">Airtable API</a>, log in to your account, select the base you need and find Base ID in the docs.",
+        "title": "Base ID",
+        "examples": ["app1234567890"],
+	"order": 2
+      },
+      "table_sales_order": {
+        "type": "string",
+        "description": "The Airtable table to store orders data.",
+        "title": "Table for orders",
+	"order": 3
+      },
+      "table_product_variant": {
+        "type": "string",
+        "description": "The Airtable table to store product variants data.",
+        "title": "Table for product variants",
+	"order": 4
+      }
+    }
+  }
+}

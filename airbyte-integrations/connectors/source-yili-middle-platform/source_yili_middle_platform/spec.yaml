@@ -4,30 +4,12 @@ connectionSpecification:
   title: Yili middle platform
   type: object
   required:
-    - apiId
-    - appKey
-    - appSecret
     - env
     - stage
-    - returnFields
   properties:
-    apiId:
-      type: string
-      order: 1
-    appKey:
-      type: string
-      order: 2
-    appSecret:
-      type: string
-      order: 3
     env:
       type: string
-      order: 4
+      order: 1
     stage:
       type: string
-      order: 5
-    returnFields:
-      type: array
-      order: 6
-      items:
-        type: string
+      order: 2

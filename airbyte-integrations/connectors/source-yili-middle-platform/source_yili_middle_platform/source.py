@@ -30,7 +30,7 @@ The approach here is not authoritative, and devs are free to use their own judge
 There are additional required TODOs in the files within the integration_tests folder and the spec.yaml file.
 """
 
-class YiliMiddlePlatform(HttpStream):
+class YiliMiddlePlatformStream(HttpStream):
     url_base = 'https://datagrid-api.digitalyili.com'
     primary_key = None
     http_method = 'POST'
@@ -38,12 +38,8 @@ class YiliMiddlePlatform(HttpStream):
     def __init__(self, config: Mapping[str, Any], **kwargs):
         super().__init__()
         self.host = 'datagrid-api.digitalyili.com'
-        self.apiId = config['apiId']
-        self.appKey = config['appKey']
-        self.appSecret = config['appSecret']
         self.env = config['env']
         self.stage = config['stage']
-        self.returnFields = config['returnFields']
 
     def path(
         self, 
@@ -90,7 +86,8 @@ class YiliMiddlePlatform(HttpStream):
     ) -> Iterable[Mapping]:
         # The response is a simple JSON whose schema matches our stream's schema exactly, 
         # so we just return a list containing the response
-        return [response.json()]
+        results = response.json()["results"]
+        return list(map(lambda result: {"table_name": self.table_name, "data": result}, results))
 
     def next_page_token(self, response: requests.Response) -> Optional[Mapping[str, Any]]:
         # The API does not offer pagination, 
@@ -119,6 +116,24 @@ x-ca-stage:{headers.get("X-Ca-Stage")}
             digestmod=hashlib.sha256
         ).digest()).decode()
 
+class ProductionPlans(YiliMiddlePlatformStream):
+    def __init__(self, config: Mapping[str, Any], **kwargs):
+        super().__init__(config)
+        self.apiId = '10149'
+        self.appKey = '204417621'
+        self.appSecret = 'A1QhbKQRSQGBClR8POHcqQYvYMuJLhUS'
+        self.table_name = 'production_plan'
+        self.returnFields = ["z_year_month","product_no","product_name","logical_node_no","logical_node_name","z_plan_prod_qty", "z_adj_prod_qty", "z_plan_prod_day1","z_plan_prod_day2","z_plan_prod_day3","z_plan_prod_day4","z_plan_prod_day5","z_plan_prod_day6","z_plan_prod_day7","z_plan_prod_day8","z_plan_prod_day9","z_plan_prod_day10","z_plan_prod_day11","z_plan_prod_day12","z_plan_prod_day13","z_plan_prod_day14","z_plan_prod_day15","z_plan_prod_day16","z_plan_prod_day17","z_plan_prod_day18","z_plan_prod_day19","z_plan_prod_day20","z_plan_prod_day21","z_plan_prod_day22","z_plan_prod_day23","z_plan_prod_day24","z_plan_prod_day25","z_plan_prod_day26","z_plan_prod_day27","z_plan_prod_day28","z_plan_prod_day29","z_plan_prod_day30","z_plan_prod_day31","deletion_flag","create_user","create_time","update_user","update_time","ds"]
+
+class DemandPlans(YiliMiddlePlatformStream):
+    def __init__(self, config: Mapping[str, Any], **kwargs):
+        super().__init__(config)
+        self.apiId = '10148'
+        self.appKey = '204417620'
+        self.appSecret = 'KjWtlHP4JT0D8vdXSJjdsQCsiYeETXw5'
+        self.table_name = 'demand_plan'
+        self.returnFields = ["product_no","product_name","product_type","warehouse_code","warehouse_name","z_year_month","target_warehouse_code","target_warehouse_name","z_plan_type","z_weight","deletion_flag","create_user","create_time","update_user","update_time","ds"]
+
 # Source
 class SourceYiliMiddlePlatform(AbstractSource):
     def check_connection(self, logger, config) -> Tuple[bool, any]:
@@ -129,4 +144,7 @@ class SourceYiliMiddlePlatform(AbstractSource):
         # Skip passing an authenticator if no authentication is required.
         # Other authenticators are available for API token-based auth and Oauth2. 
         auth = NoAuth()
-        return [YiliMiddlePlatform(authenticator=auth, config=config)]
+        return [
+            ProductionPlans(authenticator=auth, config=config),
+            DemandPlans(authenticator=auth, config=config)
+        ]

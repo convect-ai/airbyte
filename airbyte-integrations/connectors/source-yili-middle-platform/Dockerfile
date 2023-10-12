@@ -13,7 +13,7 @@ RUN apk --no-cache upgrade \
 COPY setup.py ./
 # install necessary packages to a temporary folder
 RUN pip install "cython<3.0.0" wheel
-RUN pip install pyyaml==5.4.1 --no-build-isolation
+RUN pip install PyYAML~=5.4 --no-build-isolation
 RUN pip install --prefix=/install .
 
 # build a clean environment
@@ -28,6 +28,7 @@ RUN echo "Etc/UTC" > /etc/timezone
 
 # bash is installed for more convenient debugging.
 RUN apk --no-cache add bash
+RUN pip install PyYAML~=5.4 --no-build-isolation
 
 # copy payload code only
 COPY main.py ./

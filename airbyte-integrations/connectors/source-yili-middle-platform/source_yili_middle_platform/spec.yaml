@@ -13,3 +13,21 @@ connectionSpecification:
     stage:
       type: string
       order: 2
+    product_plan_api_id:
+      type: string
+      order: 3
+    product_plan_app_key:
+      type: string
+      order: 4
+    product_plan_app_secret:
+      type: string
+      order: 5
+    demand_plan_api_id:
+      type: string
+      order: 6
+    demand_plan_app_key:
+      type: string
+      order: 7
+    demand_plan_app_secret:
+      type: string
+      order: 8

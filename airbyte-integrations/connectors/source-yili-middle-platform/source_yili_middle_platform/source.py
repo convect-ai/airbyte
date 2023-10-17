@@ -3,13 +3,13 @@
 #
 
 
+import base64
+import hashlib
+import hmac
+import json
 from typing import Any, Iterable, List, Mapping, MutableMapping, Optional, Tuple
 
 import requests
-import json
-import base64
-import hmac
-import hashlib
 from airbyte_cdk.sources import AbstractSource
 from airbyte_cdk.sources.streams import Stream
 from airbyte_cdk.sources.streams.http import HttpStream
@@ -42,6 +42,7 @@ class YiliMiddlePlatformStream(HttpStream):
         self.stage = config['stage']
         self.page_size = 1000
         self.current_page = 0
+        self.total_results = []
 
     def path(
             self,
@@ -65,7 +66,7 @@ class YiliMiddlePlatformStream(HttpStream):
         }
         body = json.dumps({
             "returnFields": self.returnFields,
-            "pageStart": self.page_size * self.current_page + 1,  # 这里进行了修改
+            "pageStart": len(self.total_results),
             "pageSize": self.page_size
         })
         contentMD5 = self.getContentMD5(body)
@@ -83,6 +84,18 @@ class YiliMiddlePlatformStream(HttpStream):
     ) -> MutableMapping[str, Any]:
         return {'appKey': self.appKey, 'appSecret': self.appSecret, 'env': self.env}
 
+    def request_body_json(
+            self,
+            stream_state: Mapping[str, Any],
+            stream_slice: Mapping[str, Any] = None,
+            next_page_token: Mapping[str, Any] = None,
+    ) -> Optional[Mapping]:
+        return {
+            "returnFields": self.returnFields,
+            "pageStart": len(self.total_results),
+            "pageSize": self.page_size
+        }
+
     def parse_response(
             self,
             response: requests.Response,
@@ -93,16 +106,17 @@ class YiliMiddlePlatformStream(HttpStream):
         # The response is a simple JSON whose schema matches our stream's schema exactly,
         # so we just return a list containing the response
         results = response.json().get("results", [])
+        self.total_results.extend(results)
         return list(map(lambda result: {"table_name": self.table_name, "data": result}, results))
 
     def next_page_token(self, response: requests.Response) -> Optional[Mapping[str, Any]]:
-        # The API does not offer pagination,
-        # so we return None to indicate there are no more pages in the response
         results = response.json().get("results", [])
-        if results:
-            self.current_page += 1
-            return {"page": self.current_page}
-        return None
+
+        if len(results) < self.page_size:
+            return None
+
+        self.current_page += 1
+        return {"page": self.current_page}
 
     def getContentMD5(self, body):
         return base64.b64encode(hashlib.md5(bytes(body, 'utf-8')).digest()).decode()
@@ -125,6 +139,21 @@ x-ca-stage:{headers.get("X-Ca-Stage")}
             msg=bytes(stringToSign, 'utf-8'),
             digestmod=hashlib.sha256
         ).digest()).decode()
+
+    def _send(self, request: requests.PreparedRequest, request_kwargs: Mapping[str, Any]) -> requests.Response:
+        print(f"Request URL: {request.url}")
+        print(f"Request Method: {request.method}")
+        print(f"Request Headers: {request.headers}")
+        if request.body:
+            print(f"Request Body: {request.body}")
+
+        response = super()._send(request, request_kwargs)
+
+        print(f"Response Status Code: {response.status_code}")
+        print(f"Response Headers: {response.headers}")
+        print(f"Response Body: {response.text}")
+
+        return response
 
 
 class ProductionPlans(YiliMiddlePlatformStream):

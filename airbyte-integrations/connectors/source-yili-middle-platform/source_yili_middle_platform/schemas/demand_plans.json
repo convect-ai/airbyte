@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "product_no": {
+      "type": ["null", "string"]
+    },
+    "product_name": {
+      "type": ["null", "string"]
+    },
+    "product_type": {
+      "type": ["null", "string"]
+    },
+    "warehouse_code": {
+      "type": ["null", "string"]
+    },
+    "warehouse_name": {
+      "type": ["null", "string"]
+    },
+    "z_year_month": {
+      "type": ["null", "string"]
+    },
+    "target_warehouse_code": {
+      "type": ["null", "string"]
+    },
+    "target_warehouse_name": {
+      "type": ["null", "string"]
+    },
+    "z_plan_type": {
+      "type": ["null", "string"]
+    },
+    "z_weight": {
+      "type": ["null", "string", "number"]
+    },
+    "deletion_flag": {
+      "type": ["null", "string"]
+    },
+    "create_user": {
+      "type": ["null", "string"]
+    },
+    "create_time": {
+      "type": ["null", "string"]
+    },
+    "update_user": {
+      "type": ["null", "string"]
+    },
+    "update_time": {
+      "type": ["null", "string"]
+    },
+    "ds": {
+      "type": ["null", "string"]
+    }
+  }
+}

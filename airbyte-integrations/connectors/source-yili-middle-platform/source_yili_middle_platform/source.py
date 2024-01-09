@@ -186,6 +186,32 @@ class DemandPlans(YiliMiddlePlatformStream):
                              "create_time", "update_user", "update_time", "ds"]
 
 
+class WarehouseTruckingCosts(YiliMiddlePlatformStream):
+    def __init__(self, config: Mapping[str, Any], **kwargs):
+        super().__init__(config)
+        self.apiId = config['warehouse_trucking_cost_api_id']
+        self.appKey = config['warehouse_trucking_cost_app_key']
+        self.appSecret = config['warehouse_trucking_cost_app_secret']
+        self.table_name = 'warehouse_trucking_cost'
+        self.returnFields = ["year", "month", "carrier", "ship_method", "inv_org_code", "sale_order_closed_time",
+                             "daily_dispatch_order_quantity", "kan_level_interval", "shipment_id", "dealer_name", "quantity",
+                             "convert_into_ton", "mileage", "cost_type", "contract_unit_price", "oil_price_linkage",
+                             "settle_accounts_unit_price", "base_freight", "oil_unit_price", "surcharge",
+                             "settle_accounts_amt", "veh_num", "prod_type", "domain_name", "line_id", "net_weight",
+                             "dest_location_id", "prod_name", "sale_region", "ds"]
+
+
+class DealerFactoryMapping(YiliMiddlePlatformStream):
+    def __init__(self, config: Mapping[str, Any], **kwargs):
+        super().__init__(config)
+        self.apiId = config['dealer_factory_mapping_api_id']
+        self.appKey = config['dealer_factory_mapping_app_key']
+        self.appSecret = config['dealer_factory_mapping_app_secret']
+        self.table_name = 'dealer_factory_mapping'
+        self.returnFields = ["dealer_name", "sale_area_lvl2_name", "sale_area_lvl3_name", "sale_area_lvl4_name",
+                             "sale_area_lvl5_name", "daily_factory_name", "often_factory_name", "ds"]
+
+
 # Source
 class SourceYiliMiddlePlatform(AbstractSource):
     def check_connection(self, logger, config) -> Tuple[bool, any]:
@@ -198,5 +224,7 @@ class SourceYiliMiddlePlatform(AbstractSource):
         auth = NoAuth()
         return [
             ProductionPlans(authenticator=auth, config=config),
-            DemandPlans(authenticator=auth, config=config)
+            DemandPlans(authenticator=auth, config=config),
+            WarehouseTruckingCosts(authenticator=auth, config=config),
+            DealerFactoryMapping(authenticator=auth, config=config)
         ]

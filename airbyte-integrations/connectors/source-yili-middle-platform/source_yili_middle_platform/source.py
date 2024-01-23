@@ -201,7 +201,7 @@ class WarehouseTruckingCosts(YiliMiddlePlatformStream):
                              "dest_location_id", "prod_name", "sale_region", "ds"]
 
 
-class DealerFactoryMapping(YiliMiddlePlatformStream):
+class DealerFactoryMappings(YiliMiddlePlatformStream):
     def __init__(self, config: Mapping[str, Any], **kwargs):
         super().__init__(config)
         self.apiId = config['dealer_factory_mapping_api_id']
@@ -226,5 +226,5 @@ class SourceYiliMiddlePlatform(AbstractSource):
             ProductionPlans(authenticator=auth, config=config),
             DemandPlans(authenticator=auth, config=config),
             WarehouseTruckingCosts(authenticator=auth, config=config),
-            DealerFactoryMapping(authenticator=auth, config=config)
+            DealerFactoryMappings(authenticator=auth, config=config)
         ]

@@ -42,7 +42,7 @@ class YiliMiddlePlatformStream(HttpStream):
         self.stage = config['stage']
         self.page_size = 1000
         self.current_page = 0
-        self.total_results = []
+        self.records_processed = 0
 
     def path(
             self,
@@ -66,7 +66,7 @@ class YiliMiddlePlatformStream(HttpStream):
         }
         body = json.dumps({
             "returnFields": self.returnFields,
-            "pageStart": len(self.total_results),
+            "pageStart": self.records_processed,
             "pageSize": self.page_size
         })
         contentMD5 = self.getContentMD5(body)
@@ -92,7 +92,7 @@ class YiliMiddlePlatformStream(HttpStream):
     ) -> Optional[Mapping]:
         return {
             "returnFields": self.returnFields,
-            "pageStart": len(self.total_results),
+            "pageStart": self.records_processed,
             "pageSize": self.page_size
         }
 
@@ -103,18 +103,14 @@ class YiliMiddlePlatformStream(HttpStream):
             stream_slice: Mapping[str, Any] = None,
             next_page_token: Mapping[str, Any] = None,
     ) -> Iterable[Mapping]:
-        # The response is a simple JSON whose schema matches our stream's schema exactly,
-        # so we just return a list containing the response
         results = response.json().get("results", [])
-        self.total_results.extend(results)
-        return list(map(lambda result: {"table_name": self.table_name, "data": result}, results))
+        self.records_processed += len(results)
+        return results
 
     def next_page_token(self, response: requests.Response) -> Optional[Mapping[str, Any]]:
         results = response.json().get("results", [])
-
         if len(results) < self.page_size:
             return None
-
         self.current_page += 1
         return {"page": self.current_page}
 
@@ -151,7 +147,7 @@ x-ca-stage:{headers.get("X-Ca-Stage")}
 
         print(f"Response Status Code: {response.status_code}")
         print(f"Response Headers: {response.headers}")
-        print(f"Response Body: {response.text}")
+        print(f"Response Body: {response.text[:100]}")
 
         return response
 

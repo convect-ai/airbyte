@@ -160,14 +160,7 @@ class ProductionPlans(YiliMiddlePlatformStream):
         self.appSecret = config['product_plan_app_secret']
         self.table_name = 'production_plan'
         self.returnFields = ["z_year_month", "product_no", "product_name", "logical_node_no", "logical_node_name", "z_plan_prod_qty",
-                             "z_adj_prod_qty", "z_plan_prod_day1", "z_plan_prod_day2", "z_plan_prod_day3", "z_plan_prod_day4",
-                             "z_plan_prod_day5", "z_plan_prod_day6", "z_plan_prod_day7", "z_plan_prod_day8", "z_plan_prod_day9",
-                             "z_plan_prod_day10", "z_plan_prod_day11", "z_plan_prod_day12", "z_plan_prod_day13", "z_plan_prod_day14",
-                             "z_plan_prod_day15", "z_plan_prod_day16", "z_plan_prod_day17", "z_plan_prod_day18", "z_plan_prod_day19",
-                             "z_plan_prod_day20", "z_plan_prod_day21", "z_plan_prod_day22", "z_plan_prod_day23", "z_plan_prod_day24",
-                             "z_plan_prod_day25", "z_plan_prod_day26", "z_plan_prod_day27", "z_plan_prod_day28", "z_plan_prod_day29",
-                             "z_plan_prod_day30", "z_plan_prod_day31", "deletion_flag", "create_user", "create_time", "update_user",
-                             "update_time", "ds"]
+                             "prod_distribute_type"]
 
 
 class DemandPlans(YiliMiddlePlatformStream):
@@ -177,9 +170,9 @@ class DemandPlans(YiliMiddlePlatformStream):
         self.appKey = config['demand_plan_app_key']
         self.appSecret = config['demand_plan_app_secret']
         self.table_name = 'demand_plan'
-        self.returnFields = ["product_no", "product_name", "product_type", "warehouse_code", "warehouse_name", "z_year_month",
-                             "target_warehouse_code", "target_warehouse_name", "z_plan_type", "z_weight", "deletion_flag", "create_user",
-                             "create_time", "update_user", "update_time", "ds"]
+        self.returnFields = ["product_no", "product_name", "product_type", "warehouse_code", "warehouse_name",
+                             "z_year_month", "target_warehouse_code", "target_warehouse_name", "z_plan_type", "z_weight",
+                             "deletion_flag", "create_user", "create_time", "update_user", "update_time", "ds"]
 
 
 class WarehouseTruckingCosts(YiliMiddlePlatformStream):

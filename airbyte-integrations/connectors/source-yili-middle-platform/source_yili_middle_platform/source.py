@@ -42,7 +42,7 @@ class YiliMiddlePlatformStream(HttpStream):
         self.stage = config['stage']
         self.page_size = 1000
         self.current_page = 0
-        self.total_results = []
+        self.records_processed = 0
 
     def path(
             self,
@@ -66,7 +66,7 @@ class YiliMiddlePlatformStream(HttpStream):
         }
         body = json.dumps({
             "returnFields": self.returnFields,
-            "pageStart": len(self.total_results),
+            "pageStart": self.records_processed,
             "pageSize": self.page_size
         })
         contentMD5 = self.getContentMD5(body)
@@ -92,7 +92,7 @@ class YiliMiddlePlatformStream(HttpStream):
     ) -> Optional[Mapping]:
         return {
             "returnFields": self.returnFields,
-            "pageStart": len(self.total_results),
+            "pageStart": self.records_processed,
             "pageSize": self.page_size
         }
 
@@ -103,18 +103,14 @@ class YiliMiddlePlatformStream(HttpStream):
             stream_slice: Mapping[str, Any] = None,
             next_page_token: Mapping[str, Any] = None,
     ) -> Iterable[Mapping]:
-        # The response is a simple JSON whose schema matches our stream's schema exactly,
-        # so we just return a list containing the response
         results = response.json().get("results", [])
-        self.total_results.extend(results)
-        return list(map(lambda result: {"table_name": self.table_name, "data": result}, results))
+        self.records_processed += len(results)
+        return results
 
     def next_page_token(self, response: requests.Response) -> Optional[Mapping[str, Any]]:
         results = response.json().get("results", [])
-
         if len(results) < self.page_size:
             return None
-
         self.current_page += 1
         return {"page": self.current_page}
 
@@ -151,7 +147,7 @@ x-ca-stage:{headers.get("X-Ca-Stage")}
 
         print(f"Response Status Code: {response.status_code}")
         print(f"Response Headers: {response.headers}")
-        print(f"Response Body: {response.text}")
+        print(f"Response Body: {response.text[:100]}")
 
         return response
 
@@ -164,14 +160,7 @@ class ProductionPlans(YiliMiddlePlatformStream):
         self.appSecret = config['product_plan_app_secret']
         self.table_name = 'production_plan'
         self.returnFields = ["z_year_month", "product_no", "product_name", "logical_node_no", "logical_node_name", "z_plan_prod_qty",
-                             "z_adj_prod_qty", "z_plan_prod_day1", "z_plan_prod_day2", "z_plan_prod_day3", "z_plan_prod_day4",
-                             "z_plan_prod_day5", "z_plan_prod_day6", "z_plan_prod_day7", "z_plan_prod_day8", "z_plan_prod_day9",
-                             "z_plan_prod_day10", "z_plan_prod_day11", "z_plan_prod_day12", "z_plan_prod_day13", "z_plan_prod_day14",
-                             "z_plan_prod_day15", "z_plan_prod_day16", "z_plan_prod_day17", "z_plan_prod_day18", "z_plan_prod_day19",
-                             "z_plan_prod_day20", "z_plan_prod_day21", "z_plan_prod_day22", "z_plan_prod_day23", "z_plan_prod_day24",
-                             "z_plan_prod_day25", "z_plan_prod_day26", "z_plan_prod_day27", "z_plan_prod_day28", "z_plan_prod_day29",
-                             "z_plan_prod_day30", "z_plan_prod_day31", "deletion_flag", "create_user", "create_time", "update_user",
-                             "update_time", "ds"]
+                             "prod_distribute_type"]
 
 
 class DemandPlans(YiliMiddlePlatformStream):
@@ -181,9 +170,35 @@ class DemandPlans(YiliMiddlePlatformStream):
         self.appKey = config['demand_plan_app_key']
         self.appSecret = config['demand_plan_app_secret']
         self.table_name = 'demand_plan'
-        self.returnFields = ["product_no", "product_name", "product_type", "warehouse_code", "warehouse_name", "z_year_month",
-                             "target_warehouse_code", "target_warehouse_name", "z_plan_type", "z_weight", "deletion_flag", "create_user",
-                             "create_time", "update_user", "update_time", "ds"]
+        self.returnFields = ["product_no", "product_name", "product_type", "warehouse_code", "warehouse_name",
+                             "z_year_month", "target_warehouse_code", "target_warehouse_name", "z_plan_type", "z_weight",
+                             "deletion_flag", "create_user", "create_time", "update_user", "update_time", "ds"]
+
+
+class WarehouseTruckingCosts(YiliMiddlePlatformStream):
+    def __init__(self, config: Mapping[str, Any], **kwargs):
+        super().__init__(config)
+        self.apiId = config['warehouse_trucking_cost_api_id']
+        self.appKey = config['warehouse_trucking_cost_app_key']
+        self.appSecret = config['warehouse_trucking_cost_app_secret']
+        self.table_name = 'warehouse_trucking_cost'
+        self.returnFields = ["year", "month", "carrier", "ship_method", "inv_org_code", "sale_order_closed_time",
+                             "daily_dispatch_order_quantity", "kan_level_interval", "shipment_id", "dealer_name", "quantity",
+                             "convert_into_ton", "mileage", "cost_type", "contract_unit_price", "oil_price_linkage",
+                             "settle_accounts_unit_price", "base_freight", "oil_unit_price", "surcharge",
+                             "settle_accounts_amt", "veh_num", "prod_type", "domain_name", "line_id", "net_weight",
+                             "dest_location_id", "prod_name", "sale_region", "ds"]
+
+
+class DealerFactoryMappings(YiliMiddlePlatformStream):
+    def __init__(self, config: Mapping[str, Any], **kwargs):
+        super().__init__(config)
+        self.apiId = config['dealer_factory_mapping_api_id']
+        self.appKey = config['dealer_factory_mapping_app_key']
+        self.appSecret = config['dealer_factory_mapping_app_secret']
+        self.table_name = 'dealer_factory_mapping'
+        self.returnFields = ["dealer_name", "sale_area_lvl2_name", "sale_area_lvl3_name", "sale_area_lvl4_name",
+                             "sale_area_lvl5_name", "daily_factory_name", "often_factory_name", "ds"]
 
 
 # Source
@@ -198,5 +213,7 @@ class SourceYiliMiddlePlatform(AbstractSource):
         auth = NoAuth()
         return [
             ProductionPlans(authenticator=auth, config=config),
-            DemandPlans(authenticator=auth, config=config)
+            DemandPlans(authenticator=auth, config=config),
+            WarehouseTruckingCosts(authenticator=auth, config=config),
+            DealerFactoryMappings(authenticator=auth, config=config)
         ]

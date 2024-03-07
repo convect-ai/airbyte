@@ -1,0 +1,54 @@
+{
+  "$schema" : "http://json-schema.org/draft-07/schema#",
+  "type" : "object",
+  "properties" : {
+    "dealer_name" : {
+      "type" : [
+        "null",
+        "string"
+      ]
+    },
+    "sale_area_lvl2_name" : {
+      "type" : [
+        "null",
+        "string"
+      ]
+    },
+    "sale_area_lvl3_name" : {
+      "type" : [
+        "null",
+        "string"
+      ]
+    },
+    "sale_area_lvl4_name" : {
+      "type" : [
+        "null",
+        "string"
+      ]
+    },
+    "sale_area_lvl5_name" : {
+      "type" : [
+        "null",
+        "string"
+      ]
+    },
+    "daily_factory_name" : {
+      "type" : [
+        "null",
+        "string"
+      ]
+    },
+    "often_factory_name" : {
+      "type" : [
+        "null",
+        "string"
+      ]
+    },
+    "ds" : {
+      "type" : [
+        "null",
+        "string"
+      ]
+    }
+  }
+}

@@ -31,3 +31,21 @@ connectionSpecification:
     demand_plan_app_secret:
       type: string
       order: 8
+    warehouse_trucking_cost_api_id:
+      type: string
+      order: 9
+    warehouse_trucking_cost_app_key:
+      type: string
+      order: 10
+    warehouse_trucking_cost_app_secret:
+      type: string
+      order: 11
+    dealer_factory_mapping_api_id:
+      type: string
+      order: 12
+    dealer_factory_mapping_app_key:
+      type: string
+      order: 13
+    dealer_factory_mapping_app_secret:
+      type: string
+      order: 14

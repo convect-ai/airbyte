@@ -1,0 +1,194 @@
+{
+  "$schema" : "http://json-schema.org/draft-07/schema#",
+  "type" : "object",
+  "properties" : {
+    "year" : {
+      "type" : [
+        "null",
+        "string"
+      ]
+    },
+    "month" : {
+      "type" : [
+        "null",
+        "string"
+      ]
+    },
+    "carrier" : {
+      "type" : [
+        "null",
+        "string"
+      ]
+    },
+    "ship_method" : {
+      "type" : [
+        "null",
+        "string"
+      ]
+    },
+    "inv_org_code" : {
+      "type" : [
+        "null",
+        "string"
+      ]
+    },
+    "sale_order_closed_time" : {
+      "type" : [
+        "null",
+        "string"
+      ]
+    },
+    "daily_dispatch_order_quantity" : {
+      "type" : [
+        "null",
+        "string",
+        "number"
+      ]
+    },
+    "kan_level_interval" : {
+      "type" : [
+        "null",
+        "string"
+      ]
+    },
+    "shipment_id" : {
+      "type" : [
+        "null",
+        "string"
+      ]
+    },
+    "dealer_name" : {
+      "type" : [
+        "null",
+        "string"
+      ]
+    },
+    "quantity" : {
+      "type" : [
+        "null",
+        "string",
+        "number"
+      ]
+    },
+    "convert_into_ton" : {
+      "type" : [
+        "null",
+        "string",
+        "number"
+      ]
+    },
+    "mileage" : {
+      "type" : [
+        "null",
+        "string",
+        "number"
+      ]
+    },
+    "cost_type" : {
+      "type" : [
+        "null",
+        "string"
+      ]
+    },
+    "contract_unit_price" : {
+      "type" : [
+        "null",
+        "string",
+        "number"
+      ]
+    },
+    "oil_price_linkage" : {
+      "type" : [
+        "null",
+        "string"
+      ]
+    },
+    "settle_accounts_unit_price" : {
+      "type" : [
+        "null",
+        "string"
+      ]
+    },
+    "base_freight" : {
+      "type" : [
+        "null",
+        "string"
+      ]
+    },
+    "oil_unit_price" : {
+      "type" : [
+        "null",
+        "string",
+        "number"
+      ]
+    },
+    "surcharge" : {
+      "type" : [
+        "null",
+        "string"
+      ]
+    },
+    "settle_accounts_amt" : {
+      "type" : [
+        "null",
+        "string"
+      ]
+    },
+    "veh_num" : {
+      "type" : [
+        "null",
+        "string",
+        "number"
+      ]
+    },
+    "prod_type" : {
+      "type" : [
+        "null",
+        "string"
+      ]
+    },
+    "domain_name" : {
+      "type" : [
+        "null",
+        "string"
+      ]
+    },
+    "line_id" : {
+      "type" : [
+        "null",
+        "string"
+      ]
+    },
+    "net_weight" : {
+      "type" : [
+        "null",
+        "string",
+        "number"
+      ]
+    },
+    "dest_location_id" : {
+      "type" : [
+        "null",
+        "string"
+      ]
+    },
+    "prod_name" : {
+      "type" : [
+        "null",
+        "string"
+      ]
+    },
+    "sale_region" : {
+      "type" : [
+        "null",
+        "string"
+      ]
+    },
+    "ds" : {
+      "type" : [
+        "null",
+        "string"
+      ]
+    }
+  }
+}

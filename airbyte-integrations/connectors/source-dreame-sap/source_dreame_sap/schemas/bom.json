@@ -44,6 +44,27 @@
         "string",
         "number"
       ]
+    },
+    "FMATNR" : {
+      "type" : [
+        "null",
+        "string",
+        "number"
+      ]
+    },
+    "FMAKTX" : {
+      "type" : [
+        "null",
+        "string",
+        "number"
+      ]
+    },
+    "STUFE" : {
+      "type" : [
+        "null",
+        "string",
+        "number"
+      ]
     }
   }
 }

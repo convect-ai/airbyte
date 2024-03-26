@@ -9,6 +9,8 @@ from abc import ABC
 from datetime import datetime
 from typing import Any, Iterable, List, Mapping, MutableMapping, Optional, Tuple, Union
 
+import psycopg2
+import psycopg2.extras
 import requests
 from airbyte_cdk.sources import AbstractSource
 from airbyte_cdk.sources.streams import Stream
@@ -85,8 +87,6 @@ class DreameSAPStream(HttpStream, ABC):
             next_page_token: Mapping[str, Any] = None,
     ) -> Optional[Union[Mapping, str]]:
         input_params = self.input_params
-        if next_page_token:
-            input_params["IMPORT"].update({"IV_PAGENO": str(next_page_token["page"]), "IV_PAGESIZE": str(next_page_token["page_size"])})
         body = {"IS_INPUT": {
             "NAME": self.input_name,
             "RECEIVER": "SAP",
@@ -105,7 +105,7 @@ class DreameSAPStream(HttpStream, ABC):
         result = response.json()
         output = json.loads(result['ES_OUTPUT']['OUTPUT'].replace('\n', '').replace('\r', '').replace('\t', ''))
         data = output['TABLES']['T_DATA']
-        return data
+        yield from data
 
     def next_page_token(self, response: requests.Response) -> Optional[Mapping[str, Any]]:
         return None
@@ -118,14 +118,30 @@ class IncrementalDreameSAPStream(DreameSAPStream, ABC):
         self.page_size = 10000
         self.current_page = 1
 
+    def request_body_data(
+            self,
+            **kwargs
+    ) -> Optional[Union[Mapping, str]]:
+        # Add pagination parameters to the request
+        input_params = self.input_params or {}
+        input_params["IMPORT"] = input_params.get("IMPORT", {})
+        input_params["IMPORT"].update({"IV_PAGENO": str(self.current_page), "IV_PAGESIZE": str(self.page_size)})
+        self.input_params = input_params
+        return super().request_body_data(**kwargs)
+
     def next_page_token(self, response: requests.Response) -> Optional[Mapping[str, Any]]:
-        result = response.json()
-        output = json.loads(result['ES_OUTPUT']['OUTPUT'].replace('\n', '').replace('\r', '').replace('\t', ''))
-        data = output['TABLES']['T_DATA']
-        if len(data) < self.page_size:
+        try:
+            result = response.json()
+            output = json.loads(result.get('ES_OUTPUT', {}).get('OUTPUT', "{}").replace('\n', '').replace('\r', '').replace('\t', ''))
+            data = output.get('TABLES', {}).get('T_DATA', [])
+        except (ValueError, KeyError) as e:
+            print(f"Error parsing response: {e}")
             return None
-        self.current_page += 1
-        return {"page": self.current_page, "page_size": self.page_size}
+
+        if len(data) >= self.page_size:
+            self.current_page += 1
+            return {"page": self.current_page, "page_size": self.page_size}
+        return None
 
 
 class ChildStreamMixin:
@@ -200,7 +216,6 @@ class PurchaseOrder(DreameSAPStream):
         iv_start = datetime.now().strftime('%Y-%m-%d')
         # IV_END today + 2 years YYYY-MM-DD
         iv_end = (datetime.now().replace(year=datetime.now().year + 2)).strftime('%Y-%m-%d')
-        # 省略实现细节，应根据具体API调整参数
         self.input_params = {"IMPORT": {"IV_START": iv_start, "IV_END": iv_end},
                              "TABLES": {"T_WERKS": [{"LOW": "1100"}, {"LOW": "1101"}, {"LOW": "1102"}, {"LOW": "1111"}]}}
         return super().request_body_data(**kwargs)
@@ -209,21 +224,38 @@ class PurchaseOrder(DreameSAPStream):
 class Bom(DreameSAPStream):
     input_name = "ZFMPP_020"
     primary_key = ["WERKS", "MATNR", "IDNRK"]
-    parent_stream_class = MaterialMasterData
     factories = ['1100', '1101', '1102', '1111']
 
     def __init__(self, config: Mapping[str, Any], **kwargs):
         super().__init__(config)
         self.config = config
+        self.database_config = {
+            "host": self.config.get('db_host'),
+            "dbname": self.config.get('db_name'),
+            "user": self.config.get('db_user'),
+            "password": self.config.get('db_password'),
+            "port": self.config.get('db_port', 5432),
+        }
+        self.material_master_data_table = self.config.get('material_master_data_table', 'material_master_data')
+
+    def get_material_master_data(self) -> Iterable[Mapping[str, Any]]:
+        """从数据库中获取 Material Master Data 的全量数据"""
+        # 这里假设配置文件包含数据库的连接信息
+        conn_info = self.database_config
+        query = f"SELECT sku_code FROM {self.material_master_data_table} WHERE status_code = 'Z001'"
+
+        with psycopg2.connect(**conn_info) as conn:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(query)
+                for record in cur:
+                    yield record
 
     def stream_slices(self, sync_mode, **kwargs) -> Iterable[Optional[Mapping[str, Any]]]:
-        # 直接从父流读取记录，并应用筛选逻辑
-        parent_stream = self.parent_stream_class(config=self.config)
-        for item in parent_stream.read_records(sync_mode=sync_mode):
-            if item.get('MTART') == 'Z001':
-                # 为每个 iv_matnr 生成 4 个 slices，每个对应一个工厂
-                for factory in self.factories:
-                    yield {"parent_id": item["MATNR"], "factory": factory}
+        # 从数据库获取 Material Master Data 记录
+        for item in self.get_material_master_data():
+            # 为每个 iv_matnr 生成 4 个 slices，每个对应一个工厂
+            for factory in self.factories:
+                yield {"parent_id": item["sku_code"], "factory": factory}
 
     def request_body_json(self, stream_slice: Mapping[str, Any] = None, **kwargs) -> Optional[Mapping]:
         # 使用 stream_slice 中的 parent_id 作为 IV_MATNR

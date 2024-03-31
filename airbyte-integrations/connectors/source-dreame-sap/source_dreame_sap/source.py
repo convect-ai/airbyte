@@ -105,6 +105,9 @@ class DreameSAPStream(HttpStream, ABC):
         result = response.json()
         output = json.loads(result['ES_OUTPUT']['OUTPUT'].replace('\n', '').replace('\r', '').replace('\t', ''))
         data = output['TABLES']['T_DATA']
+        # trim the data on every field
+        for record in data:
+            yield {k: v.strip() if isinstance(v, str) else v for k, v in record.items()}
         yield from data
 
     def next_page_token(self, response: requests.Response) -> Optional[Mapping[str, Any]]:

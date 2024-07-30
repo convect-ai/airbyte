@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "MATNR": {
+      "type": ["null", "string"]
+    },
+    "MAKTX": {
+      "type": ["null", "string"]
+    },
+    "ERSDA": {
+      "type": ["null", "string"]
+    },
+    "MTART": {
+      "type": ["null", "string"]
+    },
+    "MTBEZ": {
+      "type": ["null", "string"]
+    },
+    "MEINS": {
+      "type": ["null", "string"]
+    },
+    "STPRS": {
+      "type": ["null", "string", "number"]
+    },
+    "ZSFYXCG": {
+      "type": ["null", "string"]
+    },
+    "LVORM": {
+      "type": ["null", "string"]
+    }
+  }
+}

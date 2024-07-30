@@ -1,0 +1,70 @@
+documentationUrl: https://docs.airbyte.com/integrations/sources/dreame_sap
+connectionSpecification:
+  $schema: http://json-schema.org/draft-07/schema#
+  title: Dreame SAP
+  type: object
+  required:
+    - env
+    - db_host
+    - db_name
+    - db_user
+    - db_password
+    - db_port
+    - material_master_data_table
+  properties:
+    env:
+      type: string
+      order: 1
+      enum:
+        - dev
+        - uat
+        - prod
+
+    db_host:
+      type: string
+      order: 2
+      title: Database Host
+      description: The host of the database.
+      examples:
+        - localhost
+
+    db_name:
+        type: string
+        order: 3
+        title: Database Name
+        description: The name of the database.
+        examples:
+            - odp-user-space
+
+    db_user:
+        type: string
+        order: 4
+        title: Database User
+        description: The user of the database.
+        examples:
+            - user
+
+    db_password:
+        type: string
+        order: 5
+        title: Database Password
+        description: The password of the database.
+        examples:
+            - password
+
+    db_port:
+        type: integer
+        order: 6
+        title: Database Port
+        description: The port of the database.
+        examples:
+            - 5432
+
+    material_master_data_table:
+        type: string
+        order: 7
+        title: Material Master Data Table
+        description: The table name of the material master data.
+        examples:
+            - material_master_data_table
+

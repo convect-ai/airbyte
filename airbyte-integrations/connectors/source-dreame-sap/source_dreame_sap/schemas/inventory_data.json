@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "MATNR": {
+      "type": ["null", "string"]
+    },
+    "MAKTX": {
+      "type": ["null", "string"]
+    },
+    "WERKS": {
+      "type": ["null", "string"]
+    },
+    "NAME1": {
+      "type": ["null", "string"]
+    },
+    "LGORT": {
+      "type": ["null", "string"]
+    },
+    "LGOBE": {
+      "type": ["null", "string"]
+    },
+    "LABST": {
+      "type": ["null", "string", "number"]
+    }
+  }
+}

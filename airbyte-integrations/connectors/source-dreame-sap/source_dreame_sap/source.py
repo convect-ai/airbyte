@@ -63,8 +63,8 @@ class DreameSAPStream(HttpStream, ABC):
     def request_headers(
             self, stream_state: Mapping[str, Any], stream_slice: Mapping[str, Any] = None, next_page_token: Mapping[str, Any] = None
     ) -> Mapping[str, Any]:
-        user = 'PO_USER'
-        password = 'zm123456'
+        user = 'po_convertai_user'
+        password = r'G3c\43}1mX{Ix'
         user_pass = f"{user}:{password}"
         user_pass_encoded = base64.b64encode(user_pass.encode()).decode()
         return {
@@ -240,6 +240,23 @@ class Bom(DreameSAPStream):
             "port": self.config.get('db_port', 5432),
         }
         self.material_master_data_table = self.config.get('material_master_data_table', 'material_master_data')
+        if config['env'] == 'prod':
+            self.url_base = 'https://esbpi.dreame.tech/'
+            self.host = 'esbpe.dreame.tech'
+        if config['env'] == 'dev':
+            self.url_base = 'https://esbpi.dreame.tech:8000/'
+            self.host = 'esbpe.dreame.tech:8000'
+        if config['env'] == 'uat':
+            self.url_base = 'http://esbqi.dreame.tech:8000/'
+            self.host = 'esbpe.dreame.tech:8000'
+
+    def path(
+                self,
+                stream_state: Mapping[str, Any] = None,
+                stream_slice: Mapping[str, Any] = None,
+                next_page_token: Mapping[str, Any] = None
+        ) -> str:
+            return f'/sap/0012/'
 
     def get_material_master_data(self) -> Iterable[Mapping[str, Any]]:
         """从数据库中获取 Material Master Data 的全量数据"""
